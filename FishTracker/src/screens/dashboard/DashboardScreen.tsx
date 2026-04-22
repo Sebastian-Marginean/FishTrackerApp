@@ -655,21 +655,33 @@ export default function DashboardScreen() {
   };
 
   const confirmDeleteSession = async () => {
-    if (!pendingSessionDelete) return;
+    if (!pendingSessionDelete || !user?.id) return;
 
     const targetSession = pendingSessionDelete;
     setPendingSessionDelete(null);
 
-    const { error } = await supabase
+    const { data: deletedSession, error } = await supabase
       .from('sessions')
       .delete()
-      .eq('id', targetSession.id);
+      .eq('id', targetSession.id)
+      .eq('user_id', user.id)
+      .select('id')
+      .maybeSingle();
 
     if (error) {
       setSuccessState({
         title: t('dashboard.historyDeleteFailedTitle'),
         message: t('dashboard.historyDeleteFailedMessage'),
         details: error.message,
+        variant: 'warning',
+      });
+      return;
+    }
+
+    if (!deletedSession?.id) {
+      setSuccessState({
+        title: t('dashboard.historyDeleteFailedTitle'),
+        message: t('dashboard.historyDeleteFailedMessage'),
         variant: 'warning',
       });
       return;

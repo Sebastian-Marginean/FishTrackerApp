@@ -184,7 +184,7 @@ export default function ProfileScreen() {
 
     const [{ count: catches }, { count: sessions }, { count: groups }] = await Promise.all([
       supabase.from('catches').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-      supabase.from('sessions').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('sessions').select('*', { count: 'exact', head: true }).eq('user_id', user.id).not('ended_at', 'is', null),
       supabase.from('group_members').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
     ]);
 

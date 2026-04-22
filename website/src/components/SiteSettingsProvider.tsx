@@ -57,8 +57,7 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const nextTheme: SiteTheme = prefersDark ? 'dark' : 'light';
+    const nextTheme: SiteTheme = 'dark';
     setThemeState(nextTheme);
     applyTheme(nextTheme);
   }, []);

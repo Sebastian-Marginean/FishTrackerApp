@@ -3,9 +3,9 @@ export const siteContent = {
   tagline: 'Jurnalul digital pentru pescari care vor ordine, control si comunitate.',
   description:
     'FishTracker reuneste intr-o singura aplicatie partida activa, capturile, apele salvate, grupurile private si comunitatea, intr-o experienta rapida si usor de folosit direct de pe telefon.',
-  apkUrl: '/downloads/FishTracker-v1.0.0.apk',
+  apkUrl: '/downloads/FishTracker-v1.0.1.apk',
   apkLabel: 'Descarca APK pentru Android',
-  version: 'Android APK',
+  version: 'v1.0.1',
   status: 'Disponibil acum',
   highlights: [
     'Pornesti rapid o partida si urmaresti fiecare lanseta',
@@ -118,6 +118,15 @@ export const siteContent = {
     },
   ],
   releaseNotes: [
+    {
+      version: 'v1.0.1',
+      title: 'Update final Android',
+      notes: [
+        'Am adaugat camp separat pentru momeala de carlig, distinct de nada si montura.',
+        'Aplicatia include acum lacuri globale si lacuri personale, organizate mai clar pentru fiecare utilizator.',
+        'Chat-urile au fost fluidizate prin actualizari live mai curate si o experienta mai stabila.',
+      ],
+    },
     {
       version: 'v1.0.0',
       title: 'Lansarea aplicatiei',

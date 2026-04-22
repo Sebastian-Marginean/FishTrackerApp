@@ -1,0 +1,28 @@
+Using EAS CLI without version control system is not recommended, use this mode only if you know what you are doing.
+Failed to get Git root path with `git rev-parse --show-toplevel`. Error: spawn git ENOENT
+Falling back to using current working directory as project root.
+You can set `EAS_PROJECT_ROOT` environment variable to let eas-cli know where your project is located.
+Resolved "preview" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+Environment variables with visibility "Plain text" and "Sensitive" loaded from the "preview" environment on EAS: EXPO_PUBLIC_SUPABASE_ANON_KEY, EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_WEATHER_API_KEY.
+
+
+
+android.versionCode field in app config is ignored when version source is set to remote, but this value will still be in the manifest available via expo-constants. It's recommended to remove this value from app config.
+✔ Using remote Android credentials (Expo server)
+✔ Using Keystore from configuration: Build Credentials hN_T7rD9Vx (default)
+
+Compressing project files and uploading to EAS Build. Learn more: https://expo.fyi/eas-build-archive
+- Uploading to EAS Build (0 / 6.0 MB)\ Uploading to EAS Build (512 KB / 6.0 MB)| Uploading to EAS Build (640 KB / 6.0 MB)/ Uploading to EAS Build (640 KB / 6.0 MB)- Uploading to EAS Build (704 KB / 6.0 MB)\ Uploading to EAS Build (832 KB / 6.0 MB)| Uploading to EAS Build (3.0 MB / 6.0 MB)/ Uploading to EAS Build (3.5 MB / 6.0 MB)- Uploading to EAS Build (4.2 MB / 6.0 MB)\ Uploading to EAS Build (6.0 MB / 6.0 MB)| Uploading to EAS Build (6.0 MB / 6.0 MB)/ Uploading to EAS Build (6.0 MB / 6.0 MB)✔ Uploaded to EAS 1s
+- Computing project fingerprint\ Computing project fingerprint| Computing project fingerprint/ Computing project fingerprint- Computing project fingerprint\ Computing project fingerprint| Computing project fingerprint/ Computing project fingerprint- Computing project fingerprint\ Computing project fingerprint| Computing project fingerprint✔ Computed project fingerprint
+
+See logs: https://expo.dev/accounts/fishtracker/projects/FishTracker/builds/2fa5bd28-e687-4240-be7c-3f8110758896
+
+Waiting for build to complete. You can press Ctrl+C to exit.
+- Waiting for build to complete.\ Waiting for build to complete.| Waiting for build to complete./ Waiting for build to complete.- Waiting for build to complete.  Build queued...
+
+Start builds sooner in the priority queue.
+Sign up for a paid plan at https://expo.dev/accounts/fishtracker/settings/billing
+
+Waiting in Free tier queue
+Terminate batch job (Y/N)? Terminate batch job (Y/N)? 
+^C

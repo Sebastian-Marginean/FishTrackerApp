@@ -241,7 +241,7 @@ export default function RegisterScreen({ navigation }: any) {
     >
       <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
         <ImageBackground
-          source={require('../../../assets/splash-icon.png')}
+          source={require('../../../assets/logoFishTracker.png')}
           style={styles.hero}
           imageStyle={styles.heroImage}
         >

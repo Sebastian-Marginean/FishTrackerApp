@@ -1,0 +1,199 @@
+[
+  {
+    "id": "2fa5bd28-e687-4240-be7c-3f8110758896",
+    "status": "ERRORED",
+    "platform": "ANDROID",
+    "error": {
+      "errorCode": "UNKNOWN_ERROR",
+      "message": "Unknown error. See logs of the Prebuild build phase for more information."
+    },
+    "artifacts": {},
+    "fingerprint": {
+      "id": "019db50a-7ab8-7689-85ad-5ef8ab591c36",
+      "hash": "60109a8ef5c7b24f99989057a20ef45e201a9ec8"
+    },
+    "initiatingActor": {
+      "id": "a9df1fd7-570b-4834-9f87-092e9b3272ae",
+      "displayName": "fishtracker"
+    },
+    "logFiles": [
+      "https://job-logs.eascdn.net/production/2fa5bd28-e687-4240-be7c-3f8110758896/1776858856310-df028069-522c-44fd-a172-a51f84a3b118.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=913154a83ae5e8cc2261c1c14ab60c24b29dbd084e4a41d89dc94d463242939d4843231f86837ebb02804a9dd1343ad5e9b4d859fe73a7a4c2d6c3f5babf88a39fc567dd7d97f4335c25948ef1be305a9f9c96c13fecf7e2b025a5d180297889db2e15faf709210c594246de84722988abdc6ff373a0da3ec89c1be4be641c952eab5fcd560b5dfd9de26666734173191e41d59795ab3c61a3436a71be6f99a4d0a9a2bc520c55b6229d50b43d259eca7569e08de4592f00d0efc2274b5ecda4c4472976784478c87a628d4125b82cc6c3cd0d3ea2a4d624605fb8fb2cad6d9bd0e7ae0914d4705bda53802a8baee012afedcef842d388138d010bf1b71bd0c3",
+      "https://job-logs.eascdn.net/production/2fa5bd28-e687-4240-be7c-3f8110758896/1776862889287-24940816-3efe-4695-a490-96085b261e98.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=24b3ff8ca7cffbb3ae0c92a8847c04c45c89abc6f2a5718418d035cd976bae1632198f626449b34685539607fb840aac36f4cbe4894e49bb652ba2aca69bcca8c5e265ac85f360b006fc716b8a22605c465fb484e729edf3ee6ac9e74eda4f56df7aff0bf9f60adc8c68f3e713a13706688581d86c1cc4b9b3aa04c5f8845bb49d21d865e3d0bc82b657b112abe0cf7ea5e9658c8fafdc87033d705a6657093f039e2dbd5239527524cbeed9a1b797652e5bbfd85137faa7988b3c214a7e7e4da3437897979be933082957caad1381b20365955d9a5cdff94f3126937196c8cead3ae001e36dc01c4025017243c4302513e00b7a7ddc7fdacf6c38c180793d94",
+      "https://job-logs.eascdn.net/production/2fa5bd28-e687-4240-be7c-3f8110758896/1776862889514-11cb48d2-46d2-4e20-b635-698159642651.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=3bbde66ec1871b74d8b1a84d38111def64e33ec74cfbfa3c1baa63fac1ca72a5762911a580c0871f4ea7c7c064e3ddeaa04cee068bce934c27eaa81d9065c9c8f99afc10fbde7b99ac8041c92a2e48a6869495902f3cb51bd15c7eebfee0e95ce0189939c0a37a311b7c1e17b76c2663d257e811a270ad9c0355a94828fb1a7d3c8ca6f010532bfe99af96f102d3c116b917dc5423db96b02d453f01be863a5dd9e92f411b8908237c1d652c380b0246bc8f953b853768772bb567970b14039767a4056fc77553497aef948b74fef6ab0022d4f88eaf98cda406d62aa75af1f0792fa319cec3d0094b913dca7b2e7e8f606ae56a7a5f0b1ea2fa9de256319137",
+      "https://job-logs.eascdn.net/production/2fa5bd28-e687-4240-be7c-3f8110758896/1776862889699-8d02d24c-3457-4e16-99d9-19dfd2846fe7.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=6c4e0611621da941ea8096292f5559b472a6228a9b7015deb301ca796d99e21a7fe97274f10a21ffe197efee29ca0b9e7804c8fa7602c44c2d8fba312daf67145274e1495df367d14f4bd5ec7bcad01eb9285f61edc74a06c9ab0bc48e7788f97b8b5dde93bd405ae9aa748163eb99b65a41ebcb4ad793633d3bc0c9c1c1b6118a123d41930ac209ad7237171af2a1fda381b919ade8bc506ae5fdd9f9be1fb6335d9afca1ee91bce716cdb3f23d7f46fd7cea4c86ed111e3ed4afa294c7eeec7fd4279cfaa4ba6cd632541f3e2d6b280aa4493bee7ed40e775e9b7cdda7f50e5624037b84813ccec90f70da10076297f6e54a6e7d16bdd4a80a0c61d8f76376"
+    ],
+    "project": {
+      "id": "ff3e13a7-d92a-4adf-abce-48beb875ff05",
+      "name": "FishTracker",
+      "slug": "FishTracker",
+      "ownerAccount": {
+        "id": "563d37b6-aff1-415c-8435-7ded416b74ec",
+        "name": "fishtracker"
+      }
+    },
+    "distribution": "INTERNAL",
+    "buildProfile": "preview",
+    "sdkVersion": "54.0.0",
+    "appVersion": "1.0.1",
+    "appBuildVersion": "1",
+    "priority": "NORMAL",
+    "createdAt": "2026-04-22T11:54:16.043Z",
+    "updatedAt": "2026-04-22T13:02:41.655Z",
+    "completedAt": "2026-04-22T13:02:27.282Z",
+    "expirationDate": "2026-05-06T11:54:16.104Z",
+    "isForIosSimulator": false,
+    "metrics": {
+      "buildWaitTime": 170,
+      "buildQueueTime": 4072103,
+      "buildDuration": 18661
+    }
+  },
+  {
+    "id": "3025bf80-9c24-48ae-9083-7459ca39ba2e",
+    "status": "FINISHED",
+    "platform": "ANDROID",
+    "artifacts": {
+      "buildUrl": "https://expo.dev/artifacts/eas/6WQvbRNv2hZcbhkjuWuET9.apk",
+      "applicationArchiveUrl": "https://expo.dev/artifacts/eas/6WQvbRNv2hZcbhkjuWuET9.apk"
+    },
+    "fingerprint": {
+      "id": "019db4b6-f219-7435-9b53-5e758f0ff0c3",
+      "hash": "dcc45a606edc028d30397a020454747ea69d0981"
+    },
+    "initiatingActor": {
+      "id": "a9df1fd7-570b-4834-9f87-092e9b3272ae",
+      "displayName": "fishtracker"
+    },
+    "logFiles": [
+      "https://job-logs.eascdn.net/production/3025bf80-9c24-48ae-9083-7459ca39ba2e/1776853381856-785901b0-3e09-459a-a961-5ba4e7233aa1.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=7c6750b3e3f978bc2a26ac1705ede4dac648fa5d080ec1737b73744187a9eb6342e4250340cb1add321f3042f9a51c124ea07dbcc80eb66d759bcacea1936fea003a7f231514d15ac27c002cdd77beb8c6114a487329c3329978daafb6b7a71f3068ce968009e5061bcd848f76dfb6132223203903dd1c0ce0f851aca740ab96d0244bec16ce4ee264f6683f55f29caaff47a140d211100a0f2e0a6afbe426d68c4398a442c4fd0c4f97faf16a0534d5f51302ddc5fcc2f443bf8211ab371ca5339d7807f07bed3abe43c472428f5bc39822f02563ce365d6e32f49d1ac3b0c4b9135cbddeb3364de11c610f9bf98889705bf2191327961ba82fad91496d8c3c",
+      "https://job-logs.eascdn.net/production/3025bf80-9c24-48ae-9083-7459ca39ba2e/1776853400935-b64349d6-f3ae-46f0-9ed2-fdfa8ae593f1.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=69ab829e1de8f50050cee2add587c473b0071f7500475f8b0b7030bee10c28e1193ec9b3e435bdad0090bcb7685baa5dcf994940dec8e6ac594626156ebc093a43c670eefb49aace0344ecf46f5eaddcb9fe1b616f7a79d378c9d6515c5a36ea7209ebefde7755f3712364071c11802dc2b5d15157386059213d7cbc22766e35b92a39b5c529495866cb4c192522fc1d12ec14bbb0b7d0a63e3268189a25e8df21f7c9d3fd1df54e14e9d7a65a2ea28a1cb71a4180bb268ca62bf2bc7aebec144910c330c76a26c9e956550656c8db023f349d6095265bf1530c6e57cf809ea42df5bba127f50a0882f8315667837a6dea61b745c327ce0f4d70a0675d769041",
+      "https://job-logs.eascdn.net/production/3025bf80-9c24-48ae-9083-7459ca39ba2e/1776853401173-ef676212-eeb2-40e4-94e5-c3dcaaecccaf.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=520c3d9ecd96deffde90385a79b2cfb3281742fa0c6de121a24bd07d34c9eb8e7bb92d25308f5b15ccdd2920bd4c3dcdac132acc438430a3f06f3540ef97c37c186b184fcc26b1a774c4dc356bc0be3f45c27dc6220c416787beb9ec015afa0e3c71b9257a4799d567820145594d95f7cbfaee7cb5303b5cfa2dc609a61bd871711d6e6c1e86ee34e9f8fd9d02ae3497cf37d237a515ad3d4779fcfc2a96c7a591b193b7e691cddf17e2f5d8c7ec587b14820171876e597d5f7bee1876f8ef65d738d6a7c0005c48fa16bb2f09b60a40f771275e81cb2a881d0ca397b26828f14d0b05b7eef3e707b85e7f2b9c57054619d78073dec3a164e6da8040a44527b1",
+      "https://job-logs.eascdn.net/production/3025bf80-9c24-48ae-9083-7459ca39ba2e/1776853401362-df3dce14-9145-4cb8-89bb-c3880088939d.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=29ef235ec445ec1462f1624d621b2d1e7406e411795a295b2badd980728d6a11b3b5df6792923047d26e56b79ef16892e069db195b5052b659998145c5c6a45e69f94ca236e0df5f77a76cd1c0e7d5e022fbb97fe3adabc20635441dd60b785a959d20a7e1cbbf4b9ec85f3d9bfb83eeae3220324a0224a49c5e80bda2fcdb3c7d4f82541740b862c46ae7a0ee69fb705d18bb67f673a3b547f3f6f49b633be36cc212875f772085a0c8c4cbbcf3f6687ae0991ad6f18438ea66c25d831b30245478fc54108a0dd2c1685e573c1d8c2c68735374c89edce7d951f3edfbea3e814fe8a4bdc2452c9ffc7c35b7b6a1bcb207ba3f5d7db3331327be0b65c144ffad"
+    ],
+    "project": {
+      "id": "ff3e13a7-d92a-4adf-abce-48beb875ff05",
+      "name": "FishTracker",
+      "slug": "FishTracker",
+      "ownerAccount": {
+        "id": "563d37b6-aff1-415c-8435-7ded416b74ec",
+        "name": "fishtracker"
+      }
+    },
+    "distribution": "INTERNAL",
+    "buildProfile": "preview",
+    "sdkVersion": "54.0.0",
+    "appVersion": "1.0.0",
+    "appBuildVersion": "1",
+    "priority": "NORMAL_PLUS",
+    "createdAt": "2026-04-22T10:23:01.623Z",
+    "updatedAt": "2026-04-22T10:28:15.645Z",
+    "completedAt": "2026-04-22T10:28:06.561Z",
+    "expirationDate": "2026-05-06T10:23:01.647Z",
+    "isForIosSimulator": false,
+    "metrics": {
+      "buildWaitTime": 105,
+      "buildQueueTime": 60610,
+      "buildDuration": 243798
+    }
+  },
+  {
+    "id": "d2dd0694-f183-453c-a8c2-b782c5b9d50e",
+    "status": "FINISHED",
+    "platform": "ANDROID",
+    "artifacts": {
+      "buildUrl": "https://expo.dev/artifacts/eas/s3dSBncSxwdYPreS45gx21.apk",
+      "applicationArchiveUrl": "https://expo.dev/artifacts/eas/s3dSBncSxwdYPreS45gx21.apk"
+    },
+    "fingerprint": {
+      "id": "019d9766-5596-7121-a00a-ca03ba042467",
+      "hash": "107600e6b3795fdf5171d3389f756ef7eccd961f"
+    },
+    "initiatingActor": {
+      "id": "a9df1fd7-570b-4834-9f87-092e9b3272ae",
+      "displayName": "fishtracker"
+    },
+    "logFiles": [
+      "https://job-logs.eascdn.net/production/d2dd0694-f183-453c-a8c2-b782c5b9d50e/1776362823902-be08f260-ae05-4f87-8521-174615b595b6.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=9ff909d8df31b29336b1675b67dc61bb474c0e363435e55c16531734e886633a7eba52e39a1edddec160004def1e213d774a7d0fc6fa7ca52c879ae5e36dc02339d716d48756c6df397c1ee39dedf98fc3c21bafe5cd110a4c0fd5dd2b2fd8793aefa2ed9f3392ce75def67c477b70b6b524f1d4ca020ebd6e0446bf246e2bcc408b0a681b9c45a29d6cb7e57e4cbfaf6ab87db684e2fc1a72c89898815cbe1a691fd360abf1002deb02f7affe60ce1756dc266b75fff00ad7e888f32990bcb502df093ba50cb7f9560d8de2242110688280843766c35db4a969cd68662903c79eb47d230e7fa1b0badf77b3dc3349513be7e7ddaa222dc43ff9625e7f51f7c3",
+      "https://job-logs.eascdn.net/production/d2dd0694-f183-453c-a8c2-b782c5b9d50e/1776362826611-4b730896-e3c5-4464-869a-32241ac07b49.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=580a19147c6f83505ac4fa215aff2b71f21e0da7d6308d1eb818dc4f4efa7975cabd2fd63cf889341df9187f024d450bd731c646440fba0d4f453cf0c4376630535cc0f923e3e6e6d1837a540f12b4133b726fc35db8190a4ff6963c2d7cc32a68a6c2943da2bb5e8107dccc22d9e2f040b4aeb679def134e1005a2f97b73788f067bd3198880c36b98ef39ddf915fb4359bfa779f219a4885d1485470ab4835f4d804b3bcdee1eaf5981bf9af98446d7bc7438c16725d223673bf106ede44e9b82dccd1303627b97e28825d87043efd17ba4a8a3ad4e29ee6c67805829bef7aadbeb85c79ebecd121515cfed25da065b4116d33f65bae28342b0031c0f83a0d",
+      "https://job-logs.eascdn.net/production/d2dd0694-f183-453c-a8c2-b782c5b9d50e/1776362826985-370e3d6b-8527-4945-a8dc-7c28dd839fa5.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=1056da16c66ceedca2df59c3599c7b68001eee847fe3b79af9163b4464bc5ff7170b1adb9c60326d4bf5e29a8bdb79b2774db161f0a75e17a17d68988b875d5551ad42275d7fd6d52e8b7ee14c6abc09025358086fdbb65d912274bc99d779efcef51436877d2d5e56639420ba52ce6a97262e58cf59ffd33995c62b43ca1bb4abdd9794e11088af2d1f2c88ee03c741f8fbc6ee66d11ece2a42ae143872f3e982b86c4c998a9753d15addaaa8eaf1e41bc69fcff6061240003b67fb71ffe432e44628a85876557833759ff06d97ef16a219065deea7268e33b07f910e2b34706e60a785d2f7550c9598319acaa81343578d1871eb253715045950be563a61c8",
+      "https://job-logs.eascdn.net/production/d2dd0694-f183-453c-a8c2-b782c5b9d50e/1776362827175-b2652f73-e7b3-4aab-8b34-881a23f61cc3.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=4bb2bce0caede4bfb9709b629cbea9bb574cafe58d266630efb20ad02cacc65569aa61cb379c4cb89c6e7ef8750df20188ba3d0e24cf38c9783d59f72bbedf8ec813841b68e99762f9df4ff8f6592384af08c445fb085980bd746cb8e0b475d446e05b06a760b8bd6deb14c0e811705d98e8d35d7109046d0a453ff8913ff26493f0c1743762591e317c07bbc8b69b63f772bb670c68e7f26cade5d7d98fb7bb52bf5f5252bda4fe1af1f9e95228f92cf0ee085cb9142fe65c7822675149f5aa32c95791985a182e35c237472091d5af77be6c78267a8336a2d43f3e2da56ec28da64fe673397ecacf9dc98fc0491cb0ac422c60c11a31ca33644cf27f6262c9"
+    ],
+    "project": {
+      "id": "ff3e13a7-d92a-4adf-abce-48beb875ff05",
+      "name": "FishTracker",
+      "slug": "FishTracker",
+      "ownerAccount": {
+        "id": "563d37b6-aff1-415c-8435-7ded416b74ec",
+        "name": "fishtracker"
+      }
+    },
+    "distribution": "INTERNAL",
+    "buildProfile": "preview",
+    "sdkVersion": "54.0.0",
+    "appVersion": "1.0.0",
+    "appBuildVersion": "1",
+    "gitCommitHash": "49d9a552de0be03f1550496b64042e3c1d3cd8f6",
+    "gitCommitMessage": "Add moderation, auth, waters, and map picker improvements",
+    "priority": "NORMAL_PLUS",
+    "createdAt": "2026-04-16T18:07:02.953Z",
+    "updatedAt": "2026-04-16T22:00:24.186Z",
+    "completedAt": "2026-04-16T18:14:33.793Z",
+    "expirationDate": "2026-04-30T18:07:03.220Z",
+    "isForIosSimulator": false,
+    "metrics": {
+      "buildWaitTime": 833,
+      "buildQueueTime": 42805,
+      "buildDuration": 406815
+    }
+  },
+  {
+    "id": "2a883d25-6e62-4bfb-b12d-da07185582b5",
+    "status": "FINISHED",
+    "platform": "ANDROID",
+    "artifacts": {
+      "buildUrl": "https://expo.dev/artifacts/eas/6fBV1BaBDuC51bFqCv7MzF.apk",
+      "applicationArchiveUrl": "https://expo.dev/artifacts/eas/6fBV1BaBDuC51bFqCv7MzF.apk"
+    },
+    "fingerprint": {
+      "id": "019d9766-5596-7121-a00a-ca03ba042467",
+      "hash": "107600e6b3795fdf5171d3389f756ef7eccd961f"
+    },
+    "initiatingActor": {
+      "id": "a9df1fd7-570b-4834-9f87-092e9b3272ae",
+      "displayName": "fishtracker"
+    },
+    "logFiles": [
+      "https://job-logs.eascdn.net/production/2a883d25-6e62-4bfb-b12d-da07185582b5/1776361559720-ad2741fc-7aba-4135-857a-e51a9afb5fb2.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=64bcbe3335a4881877e9d96e1f8d03fee745c99131d85c4050b5e9d94f1c179996a99ee8e7d84d87792cff77e23a75fe859ca04e24da58fdeb9b14d4b207ad063d00e571d88ba061b6fe52827859853423ae148c19196eefca10343f6a248c1cef56137c5259e54309bd24d4fb00f856ffb5c9afb91250fd0bdbab6a6029e1e5871b47e075cefd259fd8a38722b46232deeb8156d5527e351f04753d4207680a6561a6f2f73c22eb5eb812471c0fea364e994d9aaef9cbe1cb3456bcce88477d38673c981d06b51729446f707686abc3d1d6f9c789c8fe9b1a873583a89142d5e667403db9b3e9b8c789de6278c7f2701121c34d687428c7594472fc60a65f69",
+      "https://job-logs.eascdn.net/production/2a883d25-6e62-4bfb-b12d-da07185582b5/1776361560742-a9b97cd4-26ae-407e-9910-b60d2380e968.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=7f3010833764590a406e4e9d1579e0b00c09d3c3b223aaa14acbdca271d5f518727fec4f52d63664cc0ecc341f369a708af57625a9c7ba4ff8961f9787d110357ed610ee7181f683be151f57ad087e63a019cd81ca0a5e75ff8bc100981608a2ba11265d2ab41dec4cc4ff355e3eb8574a73f4dc5a0101884c969b4818dc2acd20fa29ba44589b39092e8d8c0fd5883cca91b92c29a421f101421f056347073c9bb3d8df68b0642fa27fdc67131a6d9b8619cba35d2385d3bec6dbbdd6c4a087cc1c8b6f7cf82a3317cc442c5e561b732b62bfac2d441dd69aa042b8fb48901da6c086f4871661804c7515f6ea455993708dbbf1843643cc15f01e2b43bb657a",
+      "https://job-logs.eascdn.net/production/2a883d25-6e62-4bfb-b12d-da07185582b5/1776361560983-16753c52-3758-4661-a7ce-0061a344a108.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=4b7328ed6fce5474fade5d2d9b45584b9a4d72c8e14640db6b54fce1a0889ef2f859434ad605fffcd28173cb9c45bea42081d3d1fb3c75d5ae7cf7b8d57465cbbb8426ec42e3b5bb5f6d8b43167c6caf5b8be508878e2c220220e28711e778d36f20a0a86a0dd347bccd4aaa72946d8345ca581873ab518dbefebd16838f30a970aa2d16fa71e5196d04df1caee4b924bdf5c9564cf3dd83e3bf053a47f9e5ad54d702cc98e3580d4ca3ec60cfd84aa274d25e3e611aa2089c18e09c9c0204201f563781df8f47000a2fbd70a0a8f543b3e45866d88bf2cff35c1bab7749c91a3b38370bc614152742529aba2e93ee19a26ff477773b96981c5c887633fd3479",
+      "https://job-logs.eascdn.net/production/2a883d25-6e62-4bfb-b12d-da07185582b5/1776361561164-f5625a9c-c8d7-4ae5-a29c-89b02b6dc007.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T131411Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=700683c81cc5022757929f78548d92a95e140e77060635712c236777a825c7c1eef7259ade9bc99e8edd3e3d7d354b3cb33658c55771eefaae65a587cdd36e8ac382a81fef9eeba98ee5aa3af461fdaef9a741831e077b8b2c1956984ba97f6ff45a22c15243221958d690f48d49ae85417ef1b2da2630e62355208050f2a56b3d790f6ac46e83e6daa8f7ddfcc46397c62b4beafcabad6268ad9403cad0f0d9c90cf528fa0bd9cf151781a3e59da5f1accbded28f85755509e458cced6d23f735a654d3242320c957f3732fc0ae85ef7d5763231d1b3864c7c44254a889609652c6b0eeb6ad98c2436d6c6eb3e9a1671fe5c346bffbbbce2ad2136ec7779b2e"
+    ],
+    "project": {
+      "id": "ff3e13a7-d92a-4adf-abce-48beb875ff05",
+      "name": "FishTracker",
+      "slug": "FishTracker",
+      "ownerAccount": {
+        "id": "563d37b6-aff1-415c-8435-7ded416b74ec",
+        "name": "fishtracker"
+      }
+    },
+    "distribution": "INTERNAL",
+    "buildProfile": "preview",
+    "sdkVersion": "54.0.0",
+    "appVersion": "1.0.0",
+    "appBuildVersion": "1",
+    "gitCommitHash": "49d9a552de0be03f1550496b64042e3c1d3cd8f6",
+    "gitCommitMessage": "Add moderation, auth, waters, and map picker improvements",
+    "priority": "NORMAL_PLUS",
+    "createdAt": "2026-04-16T17:45:59.382Z",
+    "updatedAt": "2026-04-16T21:01:17.336Z",
+    "completedAt": "2026-04-16T17:53:04.496Z",
+    "expirationDate": "2026-04-30T17:45:59.424Z",
+    "isForIosSimulator": false,
+    "metrics": {
+      "buildWaitTime": 203,
+      "buildQueueTime": 42894,
+      "buildDuration": 381143
+    }
+  }
+]

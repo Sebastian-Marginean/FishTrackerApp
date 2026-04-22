@@ -3,7 +3,7 @@
     "name": "FishTracker",
     "slug": "FishTracker",
     "scheme": "fishtracker",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/logoFishTracker.png",
     "userInterfaceStyle": "light",
@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "ro.fishtracker.app",
-      "versionCode": 1,
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logoFishTracker.png",
         "backgroundColor": "#ffffff"

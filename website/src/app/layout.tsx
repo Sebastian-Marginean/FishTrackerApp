@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   title: 'FishTracker | Aplicatie pentru pescari',
   description:
     'Landing page oficial pentru FishTracker, cu prezentare, highlight-uri si link de download pentru APK Android.',
+  icons: {
+    icon: '/logoWebsite.png',
+    shortcut: '/logoWebsite.png',
+    apple: '/logoWebsite.png',
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

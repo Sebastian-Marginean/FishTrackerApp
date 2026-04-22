@@ -1,0 +1,39 @@
+{
+  "id": "2fa5bd28-e687-4240-be7c-3f8110758896",
+  "status": "IN_QUEUE",
+  "platform": "ANDROID",
+  "artifacts": {},
+  "fingerprint": {
+    "id": "019db50a-7ab8-7689-85ad-5ef8ab591c36",
+    "hash": "60109a8ef5c7b24f99989057a20ef45e201a9ec8"
+  },
+  "initiatingActor": {
+    "id": "a9df1fd7-570b-4834-9f87-092e9b3272ae",
+    "displayName": "fishtracker"
+  },
+  "logFiles": [
+    "https://job-logs.eascdn.net/production/2fa5bd28-e687-4240-be7c-3f8110758896/1776858856310-df028069-522c-44fd-a172-a51f84a3b118.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260422%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260422T115842Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=3b006908abd7063dfe832ab37de44d86203fa891af54bab4bdb66ddc69470e9a8808c3459ded76eac6649aa2a0e0e3e4cd1fd995b6623d595f76e985a30f4f8c3ba56b28802bc3970323a7ca48e17921ab928bdfc7c2888ec62a470c372bd66dbd4f2a2f2ba2d5e78d21f100ec57825e35afad53ad19ff7c7b03c2b916ef535211f579a5b76e2bd7669dde3c822536663c7e5375c251cb5ecc0b7d0d6f841110cf4840c61171600f975c2a7de4e655f2a783199499afc4a88563021572a9f7f7130149a4ed39c468491c913ae6e62a2308313dc31fdd81eea2142e4ebfd862518134c979b6990b81fead030bbe5dbad3b46de2fa502eee7818ab9d8f955919ce"
+  ],
+  "project": {
+    "id": "ff3e13a7-d92a-4adf-abce-48beb875ff05",
+    "name": "FishTracker",
+    "slug": "FishTracker",
+    "ownerAccount": {
+      "id": "563d37b6-aff1-415c-8435-7ded416b74ec",
+      "name": "fishtracker"
+    }
+  },
+  "distribution": "INTERNAL",
+  "buildProfile": "preview",
+  "sdkVersion": "54.0.0",
+  "appVersion": "1.0.1",
+  "appBuildVersion": "1",
+  "initialQueuePosition": 704,
+  "queuePosition": 638,
+  "estimatedWaitTimeLeftSeconds": 2182,
+  "priority": "NORMAL",
+  "createdAt": "2026-04-22T11:54:16.043Z",
+  "updatedAt": "2026-04-22T11:54:16.513Z",
+  "expirationDate": "2026-05-06T11:54:16.104Z",
+  "isForIosSimulator": false
+}
