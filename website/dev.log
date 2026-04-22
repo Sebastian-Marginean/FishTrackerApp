@@ -1,0 +1,9 @@
+   ▲ Next.js 15.3.1
+   - Local:        http://127.0.0.1:3011
+   - Network:      http://127.0.0.1:3011
+
+ ✓ Starting...
+ ✓ Ready in 1821ms
+ ○ Compiling / ...
+ ✓ Compiled / in 3.4s (693 modules)
+ GET / 200 in 3738ms

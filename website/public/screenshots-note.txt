@@ -1,0 +1,2 @@
+Pune aici screenshots reale din aplicatie daca vrei sa inlocuiesti mockup-urile din landing page.
+Exemple utile: dashboard, chat/comunitate, profil, grupuri.
