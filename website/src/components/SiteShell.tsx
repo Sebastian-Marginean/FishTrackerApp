@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useEffect, useRef, useState } from 'react';
@@ -57,7 +58,15 @@ export function SiteShell({ children }: { children: ReactNode }) {
       <header className={`site-header${isHeaderHidden ? ' is-hidden' : ''}`}>
         <div className="page-shell site-header-inner">
           <Link href="/" className="site-brand">
-            <span className="site-brand-mark" />
+            <span className="site-brand-mark">
+              <Image
+                src="/logoWebsite.png"
+                alt={`${siteContent.appName} logo`}
+                width={44}
+                height={44}
+                className="site-brand-logo"
+              />
+            </span>
             <strong>{siteContent.appName}</strong>
           </Link>
 
@@ -111,13 +120,23 @@ export function SiteShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      {children}
+      <div key={pathname} className="page-transition-shell">
+        {children}
+      </div>
 
       <footer className="site-footer">
         <div className="page-shell site-footer-inner">
           <div className="site-footer-brand-block">
             <div className="site-footer-brand-line">
-              <span className="site-brand-mark" />
+              <span className="site-brand-mark">
+                <Image
+                  src="/logoWebsite.png"
+                  alt={`${siteContent.appName} logo`}
+                  width={40}
+                  height={40}
+                  className="site-brand-logo"
+                />
+              </span>
               <strong>{siteContent.appName}</strong>
             </div>
             <div className="site-footer-meta">

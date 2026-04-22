@@ -25,7 +25,7 @@ export default function PreviewPage() {
       <section className="preview-flow-grid">
         {steps.map((step, index) => (
           <article key={step.title} className="subpage-card preview-step-card">
-            <div className="preview-step-phone">
+            <div className="preview-step-phone preview-step-phone-active">
               <div className="preview-step-frame">
                 <div className="preview-step-notch" />
                 <div className="preview-step-screen">
