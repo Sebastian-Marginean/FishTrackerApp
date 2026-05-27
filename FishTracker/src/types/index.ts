@@ -44,11 +44,13 @@ export interface WeatherSnapshot {
 }
 
 export type RodNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+export type RodCastEventType = 'cast' | 'stop' | 'catch';
 
 export interface Session {
   id: string;
   user_id: string;
   location_id?: string;
+  stand_name?: string;
   started_at: string;
   ended_at?: string;
   weather_snapshot?: WeatherSnapshot;
@@ -93,6 +95,17 @@ export interface Catch {
   profile?: Profile;
   location?: Location;
   group?: Group;
+}
+
+export interface RodCastHistoryEvent {
+  id: string;
+  session_id: string;
+  rod_id?: string;
+  user_id: string;
+  rod_number: RodNumber;
+  event_type: RodCastEventType;
+  client_event_id: string;
+  created_at: string;
 }
 
 export interface Group {
@@ -193,13 +206,24 @@ export interface LocalRodState {
   rodId: string | null; // UUID din DB, null dacă nu e sync-at
 }
 
+export interface LocalRodCastEvent {
+  clientEventId: string;
+  rodNumber: RodNumber;
+  eventType: RodCastEventType;
+  createdAt: number;
+  isSynced: boolean;
+}
+
 // Starea locală a unei partide active (offline-first)
 export interface LocalSessionState {
   sessionId: string | null;
   locationId: string | null;
   locationName: string;
+  standName: string;
+  notes: string;
   startedAt: number; // epoch ms
   isActive: boolean;
   rods: LocalRodState[];
+  castEvents: LocalRodCastEvent[];
   isSynced: boolean;
 }

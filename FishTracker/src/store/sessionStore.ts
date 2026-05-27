@@ -16,7 +16,29 @@ import {
   removePendingCatchesForRod,
   type PendingCatch,
 } from '../lib/storage';
-import type { LocalSessionState, LocalRodState, RodNumber, WeatherSnapshot } from '../types';
+import type { LocalRodCastEvent, LocalSessionState, LocalRodState, RodCastEventType, RodNumber, WeatherSnapshot } from '../types';
+
+const getErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== 'object') return '';
+  return 'message' in error && typeof (error as { message?: unknown }).message === 'string'
+    ? (error as { message: string }).message.toLowerCase()
+    : '';
+};
+
+const hasMissingSessionColumnError = (error: unknown, columnName: 'stand_name' | 'notes') => {
+  const message = getErrorMessage(error);
+  return message.includes(columnName) && (message.includes('schema cache') || message.includes('could not find'));
+};
+
+const hasMissingRodCastHistoryError = (error: unknown) => {
+  const message = getErrorMessage(error);
+  return message.includes('rod_cast_history') && (message.includes('schema cache') || message.includes('could not find') || message.includes('does not exist'));
+};
+
+const hasUnsupportedRodCastEventTypeError = (error: unknown) => {
+  const message = getErrorMessage(error);
+  return message.includes('rod_cast_history') && message.includes('event_type') && (message.includes('check constraint') || message.includes('violates'));
+};
 
 const ALL_ROD_NUMBERS: RodNumber[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -34,6 +56,14 @@ const buildRodState = (rodNumber: RodNumber): LocalRodState => ({
 const DEFAULT_RODS = (count = 1): LocalRodState[] =>
   ALL_ROD_NUMBERS.slice(0, Math.max(1, Math.min(10, count))).map((n) => buildRodState(n));
 
+const buildCastEvent = (rodNumber: RodNumber, eventType: RodCastEventType): LocalRodCastEvent => ({
+  clientEventId: `${eventType}_${rodNumber}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+  rodNumber,
+  eventType,
+  createdAt: Date.now(),
+  isSynced: false,
+});
+
 interface SessionStoreState {
   activeSession: LocalSessionState | null;
   isLoading: boolean;
@@ -42,9 +72,10 @@ interface SessionStoreState {
   loadFromStorage: () => Promise<void>;
 
   // Pornire / oprire partidă
-  startSession: (locationId: string | null, locationName: string, weather?: WeatherSnapshot) => Promise<void>;
-  endSession: () => Promise<void>;
+  startSession: (locationId: string | null, locationName: string, standName: string, weather?: WeatherSnapshot) => Promise<void>;
+  endSession: (details?: { standName?: string; notes?: string }) => Promise<void>;
   updateSessionLocation: (locationId: string | null, locationName: string) => Promise<void>;
+  updateSessionDetails: (details: { standName?: string; notes?: string }) => Promise<void>;
 
   // Lansete
   addRod: () => number | null;
@@ -53,6 +84,8 @@ interface SessionStoreState {
   updateRod: (rodNumber: number, updates: Partial<LocalRodState>) => void;
   saveRodSetup: (rodNumber: number, updates: Partial<LocalRodState>, userId?: string) => Promise<void>;
   resetRodTimer: (rodNumber: number) => void;
+  stopRodTimer: (rodNumber: number) => Promise<void>;
+  logRodCatchEvent: (rodNumber: number) => Promise<void>;
 
   // Capturi
   addCatch: (rodNumber: number, catchData: Omit<PendingCatch, 'tempId' | 'sessionId' | 'rodNumber' | 'caughtAt'>) => Promise<void>;
@@ -76,19 +109,22 @@ export const useSessionStore = create<SessionStoreState>((set, get) => ({
         hookSetup: rod.hookSetup ?? '',
         lastCastTimestamp: await loadRodCastTime(rod.rodNumber),
       })));
-      set({ activeSession: { ...saved, rods: restoredRods } });
+      set({ activeSession: { ...saved, rods: restoredRods, castEvents: Array.isArray(saved.castEvents) ? saved.castEvents : [] } });
     }
   },
 
-  startSession: async (locationId, locationName, weather) => {
+  startSession: async (locationId, locationName, standName, weather) => {
     set({ isLoading: true });
     const newSession: LocalSessionState = {
       sessionId: null,
       locationId,
       locationName,
+      standName: standName.trim(),
+      notes: '',
       startedAt: Date.now(),
       isActive: true,
       rods: DEFAULT_RODS(),
+      castEvents: [],
       isSynced: false,
     };
 
@@ -96,20 +132,42 @@ export const useSessionStore = create<SessionStoreState>((set, get) => ({
     void saveActiveSession(newSession);
   },
 
-  endSession: async () => {
+  endSession: async (details) => {
     const { activeSession } = get();
     if (!activeSession) return;
 
-    const ended = { ...activeSession, isActive: false };
+    const ended = {
+      ...activeSession,
+      standName: details?.standName?.trim() ?? activeSession.standName,
+      notes: details?.notes?.trim() ?? activeSession.notes,
+      isActive: false,
+    };
     await clearActiveSession();
     set({ activeSession: null });
 
     // Dacă are sessionId real, marchează ca terminată în DB
     if (ended.sessionId) {
-      await supabase
-        .from('sessions')
-        .update({ ended_at: new Date().toISOString(), is_active: false })
-        .eq('id', ended.sessionId);
+      const basePayload = {
+        ended_at: new Date().toISOString(),
+        is_active: false,
+      };
+
+      let updatePayload: Record<string, string | boolean | null> = {
+        ...basePayload,
+        stand_name: ended.standName || null,
+        notes: ended.notes || null,
+      };
+
+      let updateResult = await supabase.from('sessions').update(updatePayload).eq('id', ended.sessionId);
+
+      if (hasMissingSessionColumnError(updateResult.error, 'notes')) {
+        updatePayload = { ...basePayload, stand_name: ended.standName || null };
+        updateResult = await supabase.from('sessions').update(updatePayload).eq('id', ended.sessionId);
+      }
+
+      if (hasMissingSessionColumnError(updateResult.error, 'stand_name')) {
+        updateResult = await supabase.from('sessions').update(basePayload).eq('id', ended.sessionId);
+      }
     }
   },
 
@@ -139,6 +197,48 @@ export const useSessionStore = create<SessionStoreState>((set, get) => ({
         void saveActiveSession(synced);
         return { activeSession: synced };
       });
+    }
+  },
+
+  updateSessionDetails: async (details) => {
+    const { activeSession } = get();
+    if (!activeSession) return;
+
+    const updatedSession = {
+      ...activeSession,
+      standName: details.standName?.trim() ?? activeSession.standName,
+      notes: details.notes?.trim() ?? activeSession.notes,
+      isSynced: false,
+    };
+
+    set({ activeSession: updatedSession });
+    void saveActiveSession(updatedSession);
+
+    if (updatedSession.sessionId) {
+      let updatePayload: Record<string, string | null> = {
+        stand_name: updatedSession.standName || null,
+        notes: updatedSession.notes || null,
+      };
+
+      let updateResult = await supabase.from('sessions').update(updatePayload).eq('id', updatedSession.sessionId);
+
+      if (hasMissingSessionColumnError(updateResult.error, 'notes')) {
+        updatePayload = { stand_name: updatedSession.standName || null };
+        updateResult = await supabase.from('sessions').update(updatePayload).eq('id', updatedSession.sessionId);
+      }
+
+      if (hasMissingSessionColumnError(updateResult.error, 'stand_name')) {
+        updateResult = { error: null };
+      }
+
+      if (!updateResult.error) {
+        set((state) => {
+        if (!state.activeSession) return state;
+        const synced = { ...state.activeSession, isSynced: true };
+        void saveActiveSession(synced);
+        return { activeSession: synced };
+        });
+      }
     }
   },
 
@@ -208,7 +308,12 @@ export const useSessionStore = create<SessionStoreState>((set, get) => ({
           ? { ...r, castCount: r.castCount + 1, lastCastTimestamp: now }
           : r
       );
-      const updated = { ...state.activeSession, rods, isSynced: false };
+      const updated = {
+        ...state.activeSession,
+        rods,
+        castEvents: [...state.activeSession.castEvents, buildCastEvent(rodNumber as RodNumber, 'cast')],
+        isSynced: false,
+      };
       void saveActiveSession(updated);
       return { activeSession: updated };
     });
@@ -224,6 +329,38 @@ export const useSessionStore = create<SessionStoreState>((set, get) => ({
         r.rodNumber === rodNumber ? { ...r, lastCastTimestamp: now } : r
       );
       const updated = { ...state.activeSession, rods, isSynced: false };
+      void saveActiveSession(updated);
+      return { activeSession: updated };
+    });
+  },
+
+  stopRodTimer: async (rodNumber) => {
+    await clearRodCastTime(rodNumber);
+
+    set((state) => {
+      if (!state.activeSession) return state;
+      const rods = state.activeSession.rods.map((r) =>
+        r.rodNumber === rodNumber ? { ...r, lastCastTimestamp: null } : r
+      );
+      const updated = {
+        ...state.activeSession,
+        rods,
+        castEvents: [...state.activeSession.castEvents, buildCastEvent(rodNumber as RodNumber, 'stop')],
+        isSynced: false,
+      };
+      void saveActiveSession(updated);
+      return { activeSession: updated };
+    });
+  },
+
+  logRodCatchEvent: async (rodNumber) => {
+    set((state) => {
+      if (!state.activeSession) return state;
+      const updated = {
+        ...state.activeSession,
+        castEvents: [...state.activeSession.castEvents, buildCastEvent(rodNumber as RodNumber, 'catch')],
+        isSynced: false,
+      };
       void saveActiveSession(updated);
       return { activeSession: updated };
     });
@@ -318,16 +455,46 @@ export const useSessionStore = create<SessionStoreState>((set, get) => ({
       // 1. Creează sesiunea în DB dacă nu există
       let sessionId = activeSession.sessionId;
       if (!sessionId) {
-        const { data, error } = await supabase
+        const baseInsertPayload = {
+          user_id: userId,
+          location_id: activeSession.locationId,
+          started_at: new Date(activeSession.startedAt).toISOString(),
+          is_active: true,
+        };
+
+        let insertPayload: Record<string, string | boolean | null> = {
+          ...baseInsertPayload,
+          stand_name: activeSession.standName || null,
+          notes: activeSession.notes || null,
+        };
+
+        let insertResult = await supabase
           .from('sessions')
-          .insert({
-            user_id: userId,
-            location_id: activeSession.locationId,
-            started_at: new Date(activeSession.startedAt).toISOString(),
-            is_active: true,
-          })
+          .insert(insertPayload)
           .select('id')
           .single();
+
+        if (hasMissingSessionColumnError(insertResult.error, 'notes')) {
+          insertPayload = {
+            ...baseInsertPayload,
+            stand_name: activeSession.standName || null,
+          };
+          insertResult = await supabase
+            .from('sessions')
+            .insert(insertPayload)
+            .select('id')
+            .single();
+        }
+
+        if (hasMissingSessionColumnError(insertResult.error, 'stand_name')) {
+          insertResult = await supabase
+            .from('sessions')
+            .insert(baseInsertPayload)
+            .select('id')
+            .single();
+        }
+
+        const { data, error } = insertResult;
 
         if (error) throw error;
         sessionId = data.id;
@@ -406,6 +573,51 @@ export const useSessionStore = create<SessionStoreState>((set, get) => ({
           await removePendingCatch(pendingCatch.tempId);
         } else {
           console.warn('Sync captură eșuat:', error.message);
+        }
+      }
+
+      const pendingCastEvents = activeSession.castEvents.filter((event) => !event.isSynced);
+
+      if (pendingCastEvents.length > 0) {
+        const buildCastHistoryPayload = (events: typeof pendingCastEvents) => events.map((event) => ({
+          session_id: sessionId,
+          rod_id: rodIdMap[event.rodNumber] ?? null,
+          user_id: userId,
+          rod_number: event.rodNumber,
+          event_type: event.eventType,
+          client_event_id: event.clientEventId,
+          created_at: new Date(event.createdAt).toISOString(),
+        }));
+
+        let syncedEvents = pendingCastEvents;
+        let castHistoryResult = await supabase
+          .from('rod_cast_history')
+          .upsert(buildCastHistoryPayload(syncedEvents), { onConflict: 'client_event_id' });
+
+        if (castHistoryResult.error && hasUnsupportedRodCastEventTypeError(castHistoryResult.error)) {
+          syncedEvents = pendingCastEvents.filter((event) => event.eventType !== 'catch');
+          castHistoryResult = syncedEvents.length > 0
+            ? await supabase.from('rod_cast_history').upsert(buildCastHistoryPayload(syncedEvents), { onConflict: 'client_event_id' })
+            : { error: null };
+        }
+
+        if (castHistoryResult.error) {
+          if (!hasMissingRodCastHistoryError(castHistoryResult.error)) {
+            console.warn('Sync istoric lansări eșuat:', castHistoryResult.error.message);
+          }
+        } else {
+          const syncedEventIds = new Set(syncedEvents.map((event) => event.clientEventId));
+          set((state) => {
+            if (!state.activeSession) return state;
+            const updated = {
+              ...state.activeSession,
+              castEvents: state.activeSession.castEvents.map((event) =>
+                syncedEventIds.has(event.clientEventId) ? { ...event, isSynced: true } : event
+              ),
+            };
+            void saveActiveSession(updated);
+            return { activeSession: updated };
+          });
         }
       }
 

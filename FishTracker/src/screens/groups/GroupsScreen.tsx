@@ -18,7 +18,10 @@ import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { useUnreadStore } from '../../store/unreadStore';
 import { getAppTheme } from '../../theme';
-import type { Group, GroupMessage } from '../../types';
+import type { Group, GroupMessage, LeaderboardEntry } from '../../types';
+
+type LeaderboardPeriod = 'week' | 'month' | 'year' | 'all';
+type LeaderboardFilter = 'total_catches' | 'biggest_fish_kg' | 'total_weight_kg';
 
 interface GroupSetupHistoryRow {
   id: string;
@@ -125,7 +128,12 @@ export default function GroupsScreen() {
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDesc, setNewGroupDesc] = useState('');
   const [inviteCode, setInviteCode] = useState('');
-  const [activeTab, setActiveTab] = useState<'jurnal' | 'statistici' | 'membri' | 'chat'>('jurnal');
+  const [activeTab, setActiveTab] = useState<'jurnal' | 'clasament' | 'membri' | 'chat'>('jurnal');
+  const [groupLeaderboard, setGroupLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [loadingGroupLeaderboard, setLoadingGroupLeaderboard] = useState(false);
+  const [groupLeaderboardError, setGroupLeaderboardError] = useState<string | null>(null);
+  const [groupLbPeriod, setGroupLbPeriod] = useState<LeaderboardPeriod>('all');
+  const [groupLbFilter, setGroupLbFilter] = useState<LeaderboardFilter>('total_catches');
   const [saving, setSaving] = useState(false);
   const [successState, setSuccessState] = useState<SuccessState | null>(null);
   const [messageActionState, setMessageActionState] = useState<any | null>(null);
@@ -338,6 +346,11 @@ export default function GroupsScreen() {
   }, [activeGroup?.id, activeTab, user?.id]);
 
   useEffect(() => {
+    if (activeTab !== 'clasament' || !activeGroup?.id) return;
+    void fetchGroupLeaderboard(activeGroup.id, groupLbPeriod);
+  }, [activeGroup?.id, activeTab, groupLbPeriod]);
+
+  useEffect(() => {
     const cleanup = setInterval(() => {
       setGroupTypingUsers((prev) => prev.filter((item) => item.expiresAt > Date.now()));
     }, 1000);
@@ -452,6 +465,81 @@ export default function GroupsScreen() {
     }
 
     await fetchGroupMessages(groupId, true);
+  };
+
+  const getLeaderboardWindowStart = (period: LeaderboardPeriod) => {
+    if (period === 'all') return null;
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    if (period === 'week') {
+      start.setDate(start.getDate() - 6);
+      return start;
+    }
+
+    if (period === 'month') {
+      start.setDate(1);
+      return start;
+    }
+
+    start.setMonth(0, 1);
+    return start;
+  };
+
+  const fetchGroupLeaderboard = async (groupId: string, period: LeaderboardPeriod) => {
+    setLoadingGroupLeaderboard(true);
+    setGroupLeaderboardError(null);
+
+    const startDate = getLeaderboardWindowStart(period);
+
+    let query = supabase
+      .from('catches')
+      .select('id, user_id, weight_kg, session_id, caught_at, profiles:profiles!catches_user_id_fkey(username, avatar_url)')
+      .eq('group_id', groupId)
+      .order('caught_at', { ascending: false });
+
+    if (startDate) {
+      query = query.gte('caught_at', startDate.toISOString());
+    }
+
+    const result = await query;
+
+    if (result.error || !result.data) {
+      setGroupLeaderboard([]);
+      setGroupLeaderboardError(result.error?.message ?? t('common.unknown'));
+      setLoadingGroupLeaderboard(false);
+      return;
+    }
+
+    const grouped = new Map<string, LeaderboardEntry & { sessionIds: Set<string> }>();
+
+    for (const row of result.data as any[]) {
+      const userId = String(row.user_id);
+      const current = grouped.get(userId) ?? {
+        user_id: userId,
+        username: row.profiles?.username ?? t('groups.unknownUser'),
+        avatar_url: row.profiles?.avatar_url ?? undefined,
+        total_catches: 0,
+        biggest_fish_kg: 0,
+        total_weight_kg: 0,
+        total_sessions: 0,
+        sessionIds: new Set<string>(),
+      };
+
+      current.total_catches += 1;
+      current.biggest_fish_kg = Math.max(current.biggest_fish_kg, Number(row.weight_kg ?? 0));
+      current.total_weight_kg += Number(row.weight_kg ?? 0);
+      if (row.session_id) {
+        current.sessionIds.add(String(row.session_id));
+        current.total_sessions = current.sessionIds.size;
+      }
+
+      grouped.set(userId, current);
+    }
+
+    setGroupLeaderboard(Array.from(grouped.values()).map(({ sessionIds, ...entry }) => entry));
+    setLoadingGroupLeaderboard(false);
   };
 
   const fetchGroupMessages = async (groupId: string, silent = false) => {
@@ -846,6 +934,27 @@ export default function GroupsScreen() {
     });
   };
 
+  const sortedLeaderboard = [...groupLeaderboard].sort((a, b) => Number(b[groupLbFilter] ?? 0) - Number(a[groupLbFilter] ?? 0));
+
+  const leaderboardFilterLabel = {
+    total_catches: { icon: '🐟', title: t('community.filterMost'), subtitle: t('community.filterFish') },
+    biggest_fish_kg: { icon: '🏆', title: t('community.filterBiggest'), subtitle: t('community.filterSingleFish') },
+    total_weight_kg: { icon: '⚖️', title: t('community.filterWeight'), subtitle: t('community.filterTotal') },
+  } satisfies Record<LeaderboardFilter, { icon: string; title: string; subtitle: string }>;
+
+  const leaderboardMetricPreview = {
+    total_catches: t('community.metricByCatches'),
+    biggest_fish_kg: t('community.metricByBiggest'),
+    total_weight_kg: t('community.metricByWeight'),
+  } satisfies Record<LeaderboardFilter, string>;
+
+  const leaderboardPeriodLabel = {
+    week: t('community.periodWeek'),
+    month: t('community.periodMonth'),
+    year: t('community.periodYear'),
+    all: t('community.periodAll'),
+  } satisfies Record<LeaderboardPeriod, string>;
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }] }>
       <View style={[styles.header, { paddingTop: 12 + Math.max(insets.top * 0.15, 0), backgroundColor: theme.surface, borderBottomColor: theme.borderSoft }] }>
@@ -923,14 +1032,14 @@ export default function GroupsScreen() {
 
           {/* Tab-uri */}
           <View style={[styles.tabs, { backgroundColor: theme.surface, borderBottomColor: theme.borderSoft }] }>
-            {(['jurnal', 'statistici', 'membri', 'chat'] as const).map((tab) => (
+            {(['jurnal', 'clasament', 'membri', 'chat'] as const).map((tab) => (
               <TouchableOpacity
                 key={tab}
                 style={[styles.tab, activeTab === tab && styles.tabActive, activeTab === tab && { borderBottomColor: theme.primary }]}
                 onPress={() => setActiveTab(tab)}
               >
                 <Text style={[styles.tabText, { color: theme.tabInactive }, activeTab === tab && styles.tabTextActive, activeTab === tab && { color: theme.primary }]}>
-                  {tab === 'jurnal' ? t('groups.tabJournal') : tab === 'statistici' ? t('groups.tabStats') : tab === 'membri' ? t('groups.tabMembers') : `${t('groups.tabChat')}${(groupUnreadCounts[activeGroup?.id ?? ''] ?? 0) > 0 ? ` (${groupUnreadCounts[activeGroup?.id ?? '']})` : ''}`}
+                  {tab === 'jurnal' ? t('groups.tabJournal') : tab === 'clasament' ? t('groups.tabLeaderboard') : tab === 'membri' ? t('groups.tabMembers') : `${t('groups.tabChat')}${(groupUnreadCounts[activeGroup?.id ?? ''] ?? 0) > 0 ? ` (${groupUnreadCounts[activeGroup?.id ?? '']})` : ''}`}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -1040,25 +1149,97 @@ export default function GroupsScreen() {
               ))
             )}
 
-            {activeTab === 'statistici' && groupMembers.map((m: any) => {
-              const stats = getMemberStats(m.user_id);
-              return (
-                <View key={m.id} style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}> 
-                  <TouchableOpacity style={styles.memberInfoButton} activeOpacity={0.85} onPress={() => openPublicProfile({ userId: String(m.user_id), username: m.profiles?.username, avatarUrl: m.profiles?.avatar_url })}>
-                    <AvatarCircle avatarUrl={m.profiles?.avatar_url} fallback={m.profiles?.username?.[0]?.toUpperCase() ?? '?'} size={40} backgroundColor={theme.primary} textStyle={styles.memberAvatarText} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.memberName, { color: theme.text }]}>{getDisplayName(m.profiles?.full_name, m.profiles?.username, t('groups.unknownUser'))}</Text>
-                      {m.role === 'owner' && <Text style={[styles.ownerBadge, { color: theme.badgeText }]}>{t('groups.owner')}</Text>}
-                    </View>
-                  </TouchableOpacity>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.statNum, { color: theme.primary }]}>{t('groups.fishCount', { count: stats.total })}</Text>
-                    <Text style={[styles.statSub, { color: theme.textMuted }]}>{t('groups.totalKg', { weight: stats.totalKg })}</Text>
-                    <Text style={[styles.statSub, { color: theme.textMuted }]}>{t('groups.maxKg', { weight: stats.maxKg })}</Text>
+            {activeTab === 'clasament' && (
+              <>
+                <View style={[styles.groupLeaderboardHero, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}> 
+                  <Text style={[styles.groupLeaderboardEyebrow, { color: theme.textSoft }]}>{t('community.leaderboardPeriodTitle', { period: leaderboardPeriodLabel[groupLbPeriod] })}</Text>
+                  <Text style={[styles.groupLeaderboardTitle, { color: theme.text }]}>{t('community.topAnglers')}</Text>
+                  <Text style={[styles.groupLeaderboardSub, { color: theme.textMuted }]}>{leaderboardMetricPreview[groupLbFilter]}</Text>
+
+                  <View style={styles.groupLeaderboardPeriodRow}>
+                    {(['week', 'month', 'year', 'all'] as const).map((period) => (
+                      <TouchableOpacity
+                        key={period}
+                        style={[
+                          styles.groupLeaderboardChip,
+                          { backgroundColor: theme.surfaceAlt, borderColor: theme.border },
+                          groupLbPeriod === period && { backgroundColor: theme.primary, borderColor: theme.primary },
+                        ]}
+                        onPress={() => setGroupLbPeriod(period)}
+                      >
+                        <Text style={[styles.groupLeaderboardChipText, { color: groupLbPeriod === period ? '#fff' : theme.text }]}>{leaderboardPeriodLabel[period]}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <View style={styles.groupLeaderboardFilterDeck}>
+                    {(Object.keys(leaderboardFilterLabel) as LeaderboardFilter[]).map((key) => (
+                      <TouchableOpacity
+                        key={key}
+                        style={[
+                          styles.groupLeaderboardFilterCard,
+                          { backgroundColor: theme.surfaceAlt, borderColor: theme.border },
+                          groupLbFilter === key && { backgroundColor: theme.primaryStrong, borderColor: theme.primaryStrong },
+                        ]}
+                        onPress={() => setGroupLbFilter(key)}
+                      >
+                        <Text style={styles.groupLeaderboardFilterIcon}>{leaderboardFilterLabel[key].icon}</Text>
+                        <Text style={[styles.groupLeaderboardFilterTitle, { color: groupLbFilter === key ? '#fff' : theme.text }]}>{leaderboardFilterLabel[key].title}</Text>
+                        <Text style={[styles.groupLeaderboardFilterSub, { color: groupLbFilter === key ? 'rgba(255,255,255,0.8)' : theme.textMuted }]}>{leaderboardFilterLabel[key].subtitle}</Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
                 </View>
-              );
-            })}
+
+                {loadingGroupLeaderboard ? (
+                  <View style={styles.center}><ActivityIndicator color={theme.primary} /></View>
+                ) : sortedLeaderboard.length === 0 ? (
+                  <View style={styles.center}>
+                    <Text style={[styles.emptyText, { color: theme.textMuted }]}>
+                      {groupLeaderboardError ? t('community.leaderboardLoadFailed') : t('community.noLeaderboardCatches', { period: leaderboardPeriodLabel[groupLbPeriod].toLowerCase() })}
+                    </Text>
+                    {!!groupLeaderboardError && <Text style={[styles.statSub, { color: theme.dangerText, marginTop: 8 }]}>{groupLeaderboardError}</Text>}
+                  </View>
+                ) : sortedLeaderboard.map((item, index) => {
+                  const medals = ['🥇', '🥈', '🥉'];
+                  const isMe = item.user_id === user?.id;
+                  const metricValue = groupLbFilter === 'total_catches'
+                    ? `${item.total_catches} 🐟`
+                    : groupLbFilter === 'biggest_fish_kg'
+                      ? `${Number(item.biggest_fish_kg ?? 0).toFixed(2)} kg`
+                      : `${Number(item.total_weight_kg ?? 0).toFixed(2)} kg`;
+
+                  return (
+                    <TouchableOpacity
+                      key={item.user_id}
+                      activeOpacity={isMe ? 1 : 0.9}
+                      disabled={isMe}
+                      onPress={() => openPublicProfile({ userId: item.user_id, username: item.username, avatarUrl: item.avatar_url })}
+                      style={[
+                        styles.groupLeaderboardCard,
+                        { backgroundColor: isMe ? theme.primarySoft : theme.surface, borderColor: isMe ? theme.primary : theme.borderSoft },
+                      ]}
+                    >
+                      <View style={[styles.groupLeaderboardRank, { backgroundColor: theme.surfaceAlt }]}>
+                        <Text style={[styles.groupLeaderboardRankText, { color: theme.text }]}>{medals[index] ?? `${index + 1}`}</Text>
+                      </View>
+                      <AvatarCircle avatarUrl={item.avatar_url} fallback={item.username?.[0]?.toUpperCase() ?? '?'} size={42} backgroundColor={theme.primary} textStyle={styles.memberAvatarText} />
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.groupLeaderboardNameRow}>
+                          <Text style={[styles.memberName, { color: theme.text }]}>@{item.username}</Text>
+                          {isMe && <Text style={[styles.groupLeaderboardMeTag, { color: isDark ? theme.text : theme.primaryStrong, backgroundColor: isDark ? theme.primaryStrong : '#dff6eb' }]}>{t('community.you')}</Text>}
+                        </View>
+                        <Text style={[styles.statSub, { color: theme.textMuted }]}>{item.total_catches} {t('community.totalFish')} · {Number(item.total_weight_kg ?? 0).toFixed(1)} {t('community.totalKg')}</Text>
+                      </View>
+                      <View style={[styles.groupLeaderboardMetricPill, { backgroundColor: isDark ? theme.surfaceAlt : '#eef8f4' }]}>
+                        <Text style={[styles.groupLeaderboardMetricValue, { color: theme.primary }]}>{metricValue}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+                }
+              </>
+            )}
 
             {activeTab === 'membri' && groupMembers.map((m: any) => (
               <View key={m.id} style={[styles.statCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}> 
@@ -1294,6 +1475,25 @@ const styles = StyleSheet.create({
   ownerBadge: { fontSize: 11, color: '#BA7517', fontWeight: '600' },
   statNum: { fontSize: 14, fontWeight: '700', color: '#1D9E75' },
   statSub: { fontSize: 11, color: '#888' },
+  groupLeaderboardHero: { borderWidth: 1, borderRadius: 18, padding: 14, marginBottom: 12 },
+  groupLeaderboardEyebrow: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.7 },
+  groupLeaderboardTitle: { fontSize: 22, fontWeight: '900', marginTop: 8 },
+  groupLeaderboardSub: { fontSize: 13, marginTop: 6 },
+  groupLeaderboardPeriodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  groupLeaderboardChip: { minHeight: 36, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  groupLeaderboardChipText: { fontSize: 12, fontWeight: '800' },
+  groupLeaderboardFilterDeck: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  groupLeaderboardFilterCard: { flex: 1, borderWidth: 1, borderRadius: 16, padding: 12, minHeight: 96 },
+  groupLeaderboardFilterIcon: { fontSize: 18, marginBottom: 8 },
+  groupLeaderboardFilterTitle: { fontSize: 13, fontWeight: '800' },
+  groupLeaderboardFilterSub: { fontSize: 11, marginTop: 4, lineHeight: 16 },
+  groupLeaderboardCard: { borderRadius: 14, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1 },
+  groupLeaderboardRank: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  groupLeaderboardRankText: { fontSize: 16, fontWeight: '900' },
+  groupLeaderboardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  groupLeaderboardMeTag: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, fontSize: 10, fontWeight: '900' },
+  groupLeaderboardMetricPill: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999 },
+  groupLeaderboardMetricValue: { fontSize: 12, fontWeight: '900' },
   roleBadge: { backgroundColor: '#f0f0f0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   roleText: { fontSize: 12, color: '#666', fontWeight: '600' },
   memberRemoveBtn: { marginLeft: 8, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9 },

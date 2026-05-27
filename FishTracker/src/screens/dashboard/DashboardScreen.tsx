@@ -13,7 +13,7 @@ import * as Location from 'expo-location';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import ConfirmActionSheet from '../../components/ConfirmActionSheet';
 import SuccessSheet from '../../components/SuccessSheet';
-import { formatDate, formatDateTime, getWeatherApiLanguage, useI18n } from '../../i18n';
+import { formatDate, formatDateTime, formatTime as formatClockTime, getWeatherApiLanguage, useI18n } from '../../i18n';
 import { supabase } from '../../lib/supabase';
 import { buildFishForecast } from '../../lib/fishForecast';
 import { useAuthStore } from '../../store/authStore';
@@ -39,6 +39,8 @@ interface SuccessState {
 
 interface HistorySessionRow {
   id: string;
+  stand_name?: string | null;
+  notes?: string | null;
   started_at: string;
   ended_at?: string | null;
   is_active: boolean;
@@ -79,9 +81,21 @@ interface HistorySetupRow {
   created_at: string;
 }
 
+interface HistoryCastEventRow {
+  id: string;
+  session_id: string;
+  rod_id?: string | null;
+  rod_number: number;
+  event_type: 'cast' | 'stop' | 'catch';
+  client_event_id: string;
+  created_at: string;
+}
+
 interface SessionHistoryItem {
   id: string;
   locationName: string;
+  standName: string;
+  notes: string;
   startedAt: string;
   endedAt?: string | null;
   totalCasts: number;
@@ -91,6 +105,7 @@ interface SessionHistoryItem {
   rods: HistoryRodRow[];
   catches: HistoryCatchRow[];
   setupHistory: HistorySetupRow[];
+  castEvents: HistoryCastEventRow[];
 }
 
 interface SessionLocationChoice {
@@ -123,6 +138,18 @@ const castTimestamps: Record<number, number | null> = {
 };
 const LOCATION_MATCH_RADIUS_METERS = 750;
 const HISTORY_SESSION_LIMIT = 20;
+
+const getSupabaseErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== 'object') return '';
+  return 'message' in error && typeof (error as { message?: unknown }).message === 'string'
+    ? (error as { message: string }).message.toLowerCase()
+    : '';
+};
+
+const isMissingRodCastHistoryError = (error: unknown) => {
+  const message = getSupabaseErrorMessage(error);
+  return message.includes('rod_cast_history') && (message.includes('schema cache') || message.includes('could not find') || message.includes('does not exist'));
+};
 
 function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
   const earthRadius = 6371000;
@@ -174,7 +201,7 @@ export default function DashboardScreen() {
   const isFocused = useIsFocused();
   const { user, profile } = useAuthStore();
   const { language, t } = useI18n();
-  const { activeSession, startSession, endSession, updateSessionLocation, addRod, removeRod, castRod, saveRodSetup, addCatch, syncToSupabase } = useSessionStore();
+  const { activeSession, startSession, endSession, updateSessionLocation, updateSessionDetails, addRod, removeRod, castRod, saveRodSetup, addCatch, syncToSupabase, stopRodTimer, logRodCatchEvent } = useSessionStore();
   const mode = useThemeStore((state) => state.mode);
   const theme = getAppTheme(mode);
   const isDark = mode === 'dark';
@@ -207,6 +234,12 @@ export default function DashboardScreen() {
   const [suggestedSessionLocation, setSuggestedSessionLocation] = useState<ResolvedSessionLocation | null>(null);
   const [selectedSessionLocationId, setSelectedSessionLocationId] = useState<string | null>(null);
   const [selectedSessionLocationName, setSelectedSessionLocationName] = useState('');
+  const [sessionStandInput, setSessionStandInput] = useState('');
+  const [sessionNotesInput, setSessionNotesInput] = useState('');
+  const [sessionDetailsModalVisible, setSessionDetailsModalVisible] = useState(false);
+  const [sessionDetailsMode, setSessionDetailsMode] = useState<'end' | 'history' | 'active'>('end');
+  const [castHistoryModalVisible, setCastHistoryModalVisible] = useState(false);
+  const [expandedCastHistoryRod, setExpandedCastHistoryRod] = useState<number | null>(null);
 
   // Timer global — tick la fiecare secundă
   useEffect(() => {
@@ -267,13 +300,25 @@ export default function DashboardScreen() {
 
     setTotalHistorySessions(totalSessionsRes.count ?? 0);
 
-    const { data: sessionsData, error: sessionsError } = await supabase
+    const runHistorySessionsQuery = async (selectClause: string) => supabase
       .from('sessions')
-      .select('id, started_at, ended_at, is_active, location:locations(name)')
+      .select(selectClause)
       .eq('user_id', user.id)
       .not('ended_at', 'is', null)
       .order('started_at', { ascending: false })
       .limit(HISTORY_SESSION_LIMIT);
+
+    let sessionsRes = await runHistorySessionsQuery('id, stand_name, notes, started_at, ended_at, is_active, location:locations(name)');
+
+    if (sessionsRes.error?.message?.toLowerCase().includes('notes')) {
+      sessionsRes = await runHistorySessionsQuery('id, stand_name, started_at, ended_at, is_active, location:locations(name)');
+    }
+
+    if (sessionsRes.error?.message?.toLowerCase().includes('stand_name')) {
+      sessionsRes = await runHistorySessionsQuery('id, started_at, ended_at, is_active, location:locations(name)');
+    }
+
+    const { data: sessionsData, error: sessionsError } = sessionsRes;
 
     if (sessionsError || !sessionsData?.length) {
       setSessionHistory([]);
@@ -282,10 +327,11 @@ export default function DashboardScreen() {
       return;
     }
 
-    const sessions = (sessionsData ?? []) as HistorySessionRow[];
+    const rawSessionsData: unknown[] = Array.isArray(sessionsData) ? [...sessionsData] : [];
+    const sessions = rawSessionsData.filter((item): item is HistorySessionRow => typeof item === 'object' && item !== null && 'id' in item && 'started_at' in item);
     const sessionIds = sessions.map((item) => item.id);
 
-    const [rodsRes, catchesRes, setupHistoryRes] = await Promise.all([
+    const [rodsRes, catchesRes, setupHistoryRes, castHistoryRes] = await Promise.all([
       supabase
         .from('rods')
         .select('id, session_id, rod_number, bait_custom, hook_bait, hook_setup, cast_count, catch_count, updated_at, last_cast_at')
@@ -301,11 +347,17 @@ export default function DashboardScreen() {
         .select('id, session_id, rod_id, rod_number, bait_name, hook_bait, hook_setup, created_at')
         .in('session_id', sessionIds)
         .order('created_at', { ascending: true }),
+      supabase
+        .from('rod_cast_history')
+        .select('id, session_id, rod_id, rod_number, event_type, client_event_id, created_at')
+        .in('session_id', sessionIds)
+        .order('created_at', { ascending: false }),
     ]);
 
     const rods = ((rodsRes.data ?? []) as HistoryRodRow[]);
     const catches = ((catchesRes.data ?? []) as HistoryCatchRow[]);
-      const setupHistory = (setupHistoryRes.error ? [] : (setupHistoryRes.data ?? [])) as HistorySetupRow[];
+    const setupHistory = (setupHistoryRes.error ? [] : (setupHistoryRes.data ?? [])) as HistorySetupRow[];
+    const castEvents = (castHistoryRes.error && !isMissingRodCastHistoryError(castHistoryRes.error) ? [] : (castHistoryRes.data ?? [])) as HistoryCastEventRow[];
 
     const rodsBySession = rods.reduce<Record<string, HistoryRodRow[]>>((acc, rod) => {
       acc[rod.session_id] = [...(acc[rod.session_id] ?? []), rod];
@@ -322,10 +374,16 @@ export default function DashboardScreen() {
       return acc;
     }, {});
 
+    const castEventsBySession = castEvents.reduce<Record<string, HistoryCastEventRow[]>>((acc, item) => {
+      acc[item.session_id] = [...(acc[item.session_id] ?? []), item];
+      return acc;
+    }, {});
+
     const mapped = sessions.map((session) => {
       const sessionRods = (rodsBySession[session.id] ?? []).slice().sort((left, right) => left.rod_number - right.rod_number);
       const sessionCatches = catchesBySession[session.id] ?? [];
       const sessionSetupHistory = setupHistoryBySession[session.id] ?? [];
+      const sessionCastEvents = castEventsBySession[session.id] ?? [];
       const baitsUsed = Array.from(new Set([
         ...sessionSetupHistory
           .map((item) => item.bait_name?.trim())
@@ -338,6 +396,8 @@ export default function DashboardScreen() {
       return {
         id: session.id,
         locationName: session.location?.name?.trim() || t('dashboard.historyUnknownLocation'),
+        standName: session.stand_name?.trim() || '',
+        notes: session.notes?.trim() || '',
         startedAt: session.started_at,
         endedAt: session.ended_at,
         totalCasts: sessionRods.reduce((sum, rod) => sum + Number(rod.cast_count ?? 0), 0),
@@ -347,6 +407,7 @@ export default function DashboardScreen() {
         rods: sessionRods,
         catches: sessionCatches,
         setupHistory: sessionSetupHistory,
+        castEvents: sessionCastEvents,
       } satisfies SessionHistoryItem;
     });
 
@@ -449,6 +510,13 @@ export default function DashboardScreen() {
     setSessionLocationQuery('');
     setResolvingSessionLocation(false);
     setSuggestedSessionLocation(null);
+    setSessionStandInput('');
+  };
+
+  const closeSessionDetailsModal = () => {
+    setSessionDetailsModalVisible(false);
+    setSessionStandInput('');
+    setSessionNotesInput('');
   };
 
   const openSessionLocationPicker = async (mode: 'start' | 'update') => {
@@ -465,6 +533,7 @@ export default function DashboardScreen() {
 
     setSelectedSessionLocationId(mode === 'update' ? activeSession?.locationId ?? null : null);
     setSelectedSessionLocationName(fallbackName);
+    setSessionStandInput(mode === 'update' ? activeSession?.standName ?? '' : '');
 
     const availableLocations = sessionLocationOptions.length ? sessionLocationOptions : await fetchSessionLocations();
     const suggestion = await resolveSessionLocation(availableLocations);
@@ -499,14 +568,17 @@ export default function DashboardScreen() {
     }
 
     Object.keys(castTimestamps).forEach((key) => { castTimestamps[Number(key)] = null; });
-    await startSession(selectedSessionLocationId, finalLocationName);
+    await startSession(selectedSessionLocationId, finalLocationName, sessionStandInput);
     closeSessionLocationModal();
     setSuccessState({
       title: t('dashboard.sessionStartedTitle'),
       message: t('dashboard.sessionStartedMessage'),
-      details: selectedSessionLocationId
-        ? t('dashboard.sessionStartedWaterDetails', { location: finalLocationName })
-        : t('dashboard.sessionStartedCurrentDetails'),
+      details: [
+        selectedSessionLocationId
+          ? t('dashboard.sessionStartedWaterDetails', { location: finalLocationName })
+          : t('dashboard.sessionStartedCurrentDetails'),
+        sessionStandInput.trim() ? t('dashboard.sessionStandDetails', { stand: sessionStandInput.trim() }) : null,
+      ].filter(Boolean).join('\n'),
     });
 
     if (user?.id) {
@@ -549,19 +621,109 @@ export default function DashboardScreen() {
   };
 
   const handleEndSession = async () => {
-    Object.keys(castTimestamps).forEach((key) => { castTimestamps[Number(key)] = null; });
-    await endSession();
+    setSessionDetailsMode('end');
+    setSessionStandInput(activeSession?.standName ?? '');
+    setSessionNotesInput(activeSession?.notes ?? '');
+    setSessionDetailsModalVisible(true);
+  };
+
+  const handleEditActiveSessionDetails = () => {
+    if (!activeSession) return;
+    setSessionDetailsMode('active');
+    setSessionStandInput(activeSession.standName ?? '');
+    setSessionNotesInput(activeSession.notes ?? '');
+    setSessionDetailsModalVisible(true);
+  };
+
+  const handleEditHistorySessionDetails = () => {
+    if (!selectedHistorySession) return;
+    setSessionDetailsMode('history');
+    setSessionStandInput(selectedHistorySession.standName ?? '');
+    setSessionNotesInput(selectedHistorySession.notes ?? '');
+    setSessionDetailsModalVisible(true);
+  };
+
+  const saveSessionDetails = async () => {
+    const trimmedStand = sessionStandInput.trim();
+    const trimmedNotes = sessionNotesInput.trim();
+
+    if (sessionDetailsMode === 'end') {
+      if (user?.id) {
+        await syncToSupabase(user.id);
+      }
+      Object.keys(castTimestamps).forEach((key) => { castTimestamps[Number(key)] = null; });
+      await endSession({ standName: trimmedStand, notes: trimmedNotes });
+      await loadSessionHistory();
+      closeSessionDetailsModal();
+      setSuccessState({
+        title: t('dashboard.sessionEndedTitle'),
+        message: t('dashboard.sessionEndedMessage'),
+        details: t('dashboard.sessionEndedDetails'),
+      });
+      return;
+    }
+
+    if (sessionDetailsMode === 'active') {
+      await updateSessionDetails({ standName: trimmedStand, notes: trimmedNotes });
+      if (user?.id) {
+        await syncToSupabase(user.id);
+      }
+      closeSessionDetailsModal();
+      setSuccessState({
+        title: t('dashboard.sessionDetailsUpdatedTitle'),
+        message: t('dashboard.sessionDetailsUpdatedMessage'),
+      });
+      return;
+    }
+
+    if (!selectedHistorySession) return;
+
+    const { error } = await supabase
+      .from('sessions')
+      .update({
+        stand_name: trimmedStand || null,
+        notes: trimmedNotes || null,
+      })
+      .eq('id', selectedHistorySession.id);
+
+    if (error) {
+      setSuccessState({
+        title: t('common.error'),
+        message: error.message,
+        variant: 'warning',
+      });
+      return;
+    }
+
     await loadSessionHistory();
+    closeSessionDetailsModal();
     setSuccessState({
-      title: t('dashboard.sessionEndedTitle'),
-      message: t('dashboard.sessionEndedMessage'),
-      details: t('dashboard.sessionEndedDetails'),
+      title: t('dashboard.sessionDetailsUpdatedTitle'),
+      message: t('dashboard.sessionDetailsUpdatedMessage'),
     });
   };
 
   const handleCast = (rodNumber: number) => {
     castTimestamps[rodNumber] = Date.now(); // salvăm timestamp local
     castRod(rodNumber);
+  };
+
+  const handleStopCastTimer = async (rodNumber: number) => {
+    castTimestamps[rodNumber] = null;
+    await stopRodTimer(rodNumber);
+  };
+
+  const handleOpenCastHistory = () => {
+    if (!selectedHistorySession) return;
+    const firstRodWithEvents = selectedHistorySession.rods.find((rod) =>
+      selectedHistorySession.castEvents.some((event) => event.rod_number === rod.rod_number)
+    );
+    setExpandedCastHistoryRod(firstRodWithEvents?.rod_number ?? selectedHistorySession.rods[0]?.rod_number ?? null);
+    setCastHistoryModalVisible(true);
+  };
+
+  const toggleCastHistoryRod = (rodNumber: number) => {
+    setExpandedCastHistoryRod((current) => (current === rodNumber ? null : rodNumber));
   };
 
   const handleLogCatch = (rodNumber: number) => {
@@ -573,6 +735,7 @@ export default function DashboardScreen() {
 
   const confirmCatch = async () => {
     if (!catchModal) return;
+    const rodNumber = catchModal;
     const species = catchSpecies.trim();
 
     if (!species) {
@@ -586,7 +749,15 @@ export default function DashboardScreen() {
 
     const weight = parseFloat(catchWeight);
     const weightPart = !isNaN(weight) && weight > 0 ? ` · ${weight} kg` : '';
-    await addCatch(catchModal, {
+
+    if (castTimestamps[rodNumber] !== null) {
+      castTimestamps[rodNumber] = null;
+      await stopRodTimer(rodNumber);
+    }
+
+    await logRodCatchEvent(rodNumber);
+
+    await addCatch(rodNumber, {
       groupId: selectedCatchGroupId,
       fishSpecies: species,
       weightKg: !isNaN(weight) && weight > 0 ? weight : undefined,
@@ -601,7 +772,7 @@ export default function DashboardScreen() {
     setCatchModal(null);
     setSuccessState({
       title: t('dashboard.catchSavedTitle'),
-      message: t('dashboard.catchSavedMessage', { species, weightPart, rod: catchModal }),
+      message: t('dashboard.catchSavedMessage', { species, weightPart, rod: rodNumber }),
       details: selectedCatchGroupId
         ? t('dashboard.catchSavedDetailsGroup')
         : t('dashboard.catchSavedDetailsSolo'),
@@ -723,9 +894,19 @@ export default function DashboardScreen() {
               {isActive ? t('dashboard.activeSession', { location: activeSession.locationName }) : t('dashboard.noActiveSession')}
             </Text>
             {isActive && (
-              <TouchableOpacity onPress={() => void openSessionLocationPicker('update')}>
-                <Text style={[styles.changeLocationLinkText, { color: theme.primary }]}>{t('dashboard.changeLocation')}</Text>
-              </TouchableOpacity>
+              <>
+                {!!activeSession.standName && (
+                  <Text style={[styles.sessionStandLabel, { color: theme.textSoft }]}>{t('dashboard.sessionStandDetails', { stand: activeSession.standName })}</Text>
+                )}
+                <View style={styles.headerLinksRow}>
+                  <TouchableOpacity onPress={() => void openSessionLocationPicker('update')}>
+                    <Text style={[styles.changeLocationLinkText, { color: theme.primary }]}>{t('dashboard.changeLocation')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleEditActiveSessionDetails}>
+                    <Text style={[styles.changeLocationLinkText, { color: theme.primary }]}>{t('dashboard.editSessionDetails')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
             )}
           </View>
           {isActive ? (
@@ -801,7 +982,7 @@ export default function DashboardScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.rodTitle, { color: theme.text }]}>{t('dashboard.rod', { number: rodNum })}</Text>
                     {rod?.baitName ? (
-                      <Text style={[styles.rodBait, { color: theme.textMuted }]}>🪱 {rod.baitName}</Text>
+                      <Text style={[styles.rodBait, { color: theme.textMuted }]}> {rod.baitName}</Text>
                     ) : isActive ? (
                       <TouchableOpacity onPress={() => {
                         setBaitInput('');
@@ -848,7 +1029,7 @@ export default function DashboardScreen() {
 
               {/* Montură */}
               {rod?.hookSetup ? (
-                <Text style={[styles.hookText, { color: theme.textMuted }]}>🪝 {rod.hookSetup}</Text>
+                <Text style={[styles.hookText, { color: theme.textMuted }]}> {rod.hookSetup}</Text>
               ) : null}
               {rod?.hookBait ? (
                 <Text style={[styles.hookText, { color: theme.textMuted }]}>{t('dashboard.hookBaitInline', { value: rod.hookBait })}</Text>
@@ -872,6 +1053,20 @@ export default function DashboardScreen() {
                       <Text style={[styles.castBtnText, { color: isDark ? theme.text : '#185FA5' }]}>{t('dashboard.cast')}</Text>
                     </View>
                   </TouchableOpacity>
+                  {hasCast && (
+                    <TouchableOpacity
+                      style={[
+                        styles.stopCastBtn,
+                        {
+                          backgroundColor: isDark ? theme.dangerSoft : '#FFF1F1',
+                          borderColor: isDark ? theme.dangerText : '#F4CACA',
+                        },
+                      ]}
+                      onPress={() => void handleStopCastTimer(rodNum)}
+                    >
+                      <Text style={[styles.stopCastBtnText, { color: theme.dangerText }]}>{t('dashboard.stopCastTimer')}</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={[
                       styles.catchBtn,
@@ -1119,6 +1314,15 @@ export default function DashboardScreen() {
                   onChangeText={setSessionLocationQuery}
                 />
 
+                <Text style={[styles.modalLabel, { color: theme.textMuted }]}>{t('dashboard.sessionStandLabel')}</Text>
+                <TextInput
+                  style={[styles.modalInput, { borderColor: theme.border, color: theme.text, backgroundColor: theme.inputBg }]}
+                  placeholder={t('dashboard.sessionStandPlaceholder')}
+                  placeholderTextColor={theme.textSoft}
+                  value={sessionStandInput}
+                  onChangeText={setSessionStandInput}
+                />
+
                 <TouchableOpacity
                   style={[
                     styles.sessionLocationRow,
@@ -1285,6 +1489,9 @@ export default function DashboardScreen() {
                         <Text style={[styles.historySessionMeta, { color: theme.textSoft }]}>
                           {t('dashboard.historyDuration', { value: formatSessionDuration(session.startedAt, session.endedAt) })}
                         </Text>
+                        {!!session.standName && (
+                          <Text style={[styles.historySessionMeta, { color: theme.textSoft }]}>{t('dashboard.sessionStandDetails', { stand: session.standName })}</Text>
+                        )}
                       </View>
                       <View style={styles.historyCardActions}>
                         <TouchableOpacity
@@ -1340,7 +1547,7 @@ export default function DashboardScreen() {
       <Modal visible={!!selectedHistorySession} animationType="slide">
         <SafeAreaView style={[styles.forecastSafe, { backgroundColor: theme.background }]}> 
           <View style={[styles.forecastHeader, { backgroundColor: theme.surface, borderBottomColor: theme.borderSoft }]}> 
-            <TouchableOpacity onPress={() => setSelectedHistorySession(null)}>
+            <TouchableOpacity onPress={() => { setCastHistoryModalVisible(false); setExpandedCastHistoryRod(null); setSelectedHistorySession(null); }}>
               <Text style={[styles.forecastBack, { color: theme.primary }]}>‹ {t('dashboard.forecastBack')}</Text>
             </TouchableOpacity>
             <Text style={[styles.forecastTitle, { color: theme.text }]}>{t('dashboard.historyDetailTitle')}</Text>
@@ -1353,13 +1560,35 @@ export default function DashboardScreen() {
                 <Text style={[styles.historyDetailEyebrow, { color: theme.textSoft }]}>{t('dashboard.historySessionAt', { location: selectedHistorySession.locationName })}</Text>
                 <Text style={[styles.historyDetailTitle, { color: theme.text }]}>{formatDateTime(language, selectedHistorySession.startedAt)}</Text>
                 <Text style={[styles.historyDetailSub, { color: theme.textMuted }]}>{t('dashboard.historyDuration', { value: formatSessionDuration(selectedHistorySession.startedAt, selectedHistorySession.endedAt) })}</Text>
+                {!!selectedHistorySession.standName && (
+                  <Text style={[styles.historyDetailSub, { color: theme.textMuted }]}>{t('dashboard.sessionStandDetails', { stand: selectedHistorySession.standName })}</Text>
+                )}
+                {!!selectedHistorySession.notes && (
+                  <Text style={[styles.historyDetailNotes, { color: theme.text }]}>{selectedHistorySession.notes}</Text>
+                )}
 
-                <TouchableOpacity
-                  style={[styles.historyDetailDeleteButton, { backgroundColor: isDark ? theme.dangerSoft : '#FFF1F1', borderColor: isDark ? theme.dangerText : '#F4CACA' }]}
-                  onPress={() => setPendingSessionDelete(selectedHistorySession)}
-                >
-                  <Text style={[styles.historyDetailDeleteText, { color: theme.dangerText }]}>{t('dashboard.historyDeleteAction')}</Text>
-                </TouchableOpacity>
+                <View style={styles.historyDetailActionsRow}>
+                  <TouchableOpacity
+                    style={[styles.historyDetailEditButton, { backgroundColor: theme.primarySoft, borderColor: theme.borderSoft }]}
+                    onPress={handleEditHistorySessionDetails}
+                  >
+                    <Text style={[styles.historyDetailEditText, { color: isDark ? theme.text : theme.primaryStrong }]}>{t('dashboard.editSessionDetails')}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.historyDetailSecondaryButton, { backgroundColor: theme.surfaceAlt, borderColor: theme.borderSoft }]}
+                    onPress={handleOpenCastHistory}
+                  >
+                    <Text style={[styles.historyDetailSecondaryText, { color: theme.text }]}>{t('dashboard.viewCastHistory')}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.historyDetailDeleteButton, { backgroundColor: isDark ? theme.dangerSoft : '#FFF1F1', borderColor: isDark ? theme.dangerText : '#F4CACA' }]}
+                    onPress={() => setPendingSessionDelete(selectedHistorySession)}
+                  >
+                    <Text style={[styles.historyDetailDeleteText, { color: theme.dangerText }]}>{t('dashboard.historyDeleteAction')}</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <View style={styles.historyMetricsRow}>
                   <View style={[styles.historyMetricCard, { backgroundColor: theme.surfaceAlt }]}> 
@@ -1387,8 +1616,13 @@ export default function DashboardScreen() {
                 return (
                   <View key={rod.id} style={[styles.historyRodDetailCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}> 
                     <View style={styles.historyRodHeader}>
-                      <Text style={[styles.historyRodTitle, { color: theme.text }]}>{t('dashboard.historyRodSummary', { number: rod.rod_number })}</Text>
-                      <Text style={[styles.historyRodMeta, { color: theme.textMuted }]}>{rod.cast_count} {t('dashboard.castCount')} · {rod.catch_count} {t('dashboard.catchCount')}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.historyRodTitle, { color: theme.text }]}>{t('dashboard.historyRodSummary', { number: rod.rod_number })}</Text>
+                        <Text style={[styles.historyRodMeta, { color: theme.textMuted }]}>{rod.cast_count} {t('dashboard.castCount')} · {rod.catch_count} {t('dashboard.catchCount')}</Text>
+                        {!!rod.last_cast_at && (
+                          <Text style={[styles.historyRodMeta, { color: theme.textSoft }]}>{t('dashboard.historyLastCast', { value: formatDateTime(language, rod.last_cast_at) })}</Text>
+                        )}
+                      </View>
                     </View>
 
                     <View style={[styles.historyTimelineSection, { backgroundColor: isDark ? theme.surfaceAlt : theme.primarySoft, borderColor: isDark ? theme.border : theme.borderSoft }]}> 
@@ -1447,6 +1681,146 @@ export default function DashboardScreen() {
         </SafeAreaView>
       </Modal>
 
+      <Modal visible={castHistoryModalVisible} animationType="slide" onRequestClose={() => { setCastHistoryModalVisible(false); setExpandedCastHistoryRod(null); }}>
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}> 
+          <View style={[styles.forecastHeader, { backgroundColor: theme.surface, borderBottomColor: theme.borderSoft }]}> 
+            <TouchableOpacity onPress={() => { setCastHistoryModalVisible(false); setExpandedCastHistoryRod(null); }}>
+              <Text style={[styles.forecastBack, { color: theme.primary }]}>‹ {t('dashboard.forecastBack')}</Text>
+            </TouchableOpacity>
+            <Text style={[styles.forecastTitle, { color: theme.text }]}>{t('dashboard.castHistoryTitle')}</Text>
+            <View style={{ width: 60 }} />
+          </View>
+
+          <ScrollView contentContainerStyle={styles.historyDetailScroll}>
+            <View style={[styles.historyDetailHero, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}> 
+              <Text style={[styles.historyDetailEyebrow, { color: theme.textSoft }]}>{t('dashboard.historySessionAt', { location: selectedHistorySession?.locationName ?? t('dashboard.historyUnknownLocation') })}</Text>
+              <Text style={[styles.historyDetailTitle, { color: theme.text }]}>{t('dashboard.castHistoryTitle')}</Text>
+              <Text style={[styles.historyDetailSub, { color: theme.textMuted }]}>{t('dashboard.castHistorySubtitle')}</Text>
+              <Text style={[styles.castHistoryHint, { color: theme.textSoft }]}>{t('dashboard.castHistoryDropdownHint')}</Text>
+            </View>
+
+            {(selectedHistorySession?.rods ?? []).map((rod) => {
+              const rodEvents = (selectedHistorySession?.castEvents ?? []).filter((event) => event.rod_number === rod.rod_number);
+              const latestEvent = rodEvents[0];
+              const isExpanded = expandedCastHistoryRod === rod.rod_number;
+
+              return (
+                <View key={rod.id} style={[styles.castHistoryRodCard, { backgroundColor: theme.surface, borderColor: theme.borderSoft }]}> 
+                  <TouchableOpacity style={styles.castHistoryHeader} onPress={() => toggleCastHistoryRod(rod.rod_number)} activeOpacity={0.86}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.historyRodTitle, { color: theme.text }]}>{t('dashboard.historyRodSummary', { number: rod.rod_number })}</Text>
+                      <View style={styles.castHistorySummaryRow}>
+                        <View style={[styles.castHistoryPill, { backgroundColor: theme.surfaceAlt }]}> 
+                          <Text style={[styles.castHistoryPillText, { color: theme.textMuted }]}>{t('dashboard.castHistoryEventCount', { count: rodEvents.length })}</Text>
+                        </View>
+                        <Text style={[styles.historyRodMeta, { color: theme.textMuted }]}>{rod.cast_count} {t('dashboard.historyTotalCasts')}</Text>
+                      </View>
+                      <Text style={[styles.historyRodMeta, { color: theme.textSoft }]}>
+                        {latestEvent
+                          ? t('dashboard.castHistoryLatestEvent', {
+                              label: latestEvent.event_type === 'cast'
+                                ? t('dashboard.castHistoryEventCast')
+                                : latestEvent.event_type === 'catch'
+                                  ? t('dashboard.castHistoryEventCatch')
+                                  : t('dashboard.castHistoryEventStop'),
+                              time: formatClockTime(language, latestEvent.created_at, { hour: '2-digit', minute: '2-digit' }),
+                            })
+                          : t('dashboard.castHistoryNoRodEntries')}
+                      </Text>
+                    </View>
+
+                    <View style={[styles.castHistoryToggleBtn, { backgroundColor: isDark ? theme.surfaceAlt : theme.primarySoft }]}> 
+                      <Text style={[styles.castHistoryToggleText, { color: isDark ? theme.text : theme.primaryStrong }]}>{isExpanded ? t('common.hide') : t('common.show')}</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  {isExpanded && (
+                    <View style={styles.castHistoryEventList}>
+                      {rodEvents.length > 0 ? rodEvents.map((event) => {
+                        const eventLabel = event.event_type === 'cast'
+                          ? t('dashboard.castHistoryEventCast')
+                          : event.event_type === 'catch'
+                            ? t('dashboard.castHistoryEventCatch')
+                            : t('dashboard.castHistoryEventStop');
+
+                        return (
+                          <View key={event.client_event_id} style={[styles.castHistoryEventRow, { borderTopColor: theme.borderSoft }]}> 
+                            <View style={[styles.castHistoryEventBadge, { backgroundColor: event.event_type === 'cast' ? (isDark ? theme.primarySoft : '#E7F6F0') : (isDark ? theme.dangerSoft : '#FFF1F1') }]}> 
+                              <Text style={[styles.castHistoryEventBadgeText, { color: event.event_type === 'cast' ? (isDark ? theme.text : theme.primaryStrong) : theme.dangerText }]}>{eventLabel}</Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.castHistoryEventTitle, { color: theme.text }]}>{t('dashboard.castHistoryEventAt', { label: eventLabel, time: formatClockTime(language, event.created_at, { hour: '2-digit', minute: '2-digit' }) })}</Text>
+                              <Text style={[styles.castHistoryEventTime, { color: theme.textSoft }]}>{formatDateTime(language, event.created_at)}</Text>
+                            </View>
+                          </View>
+                        );
+                      }) : (
+                        <Text style={[styles.castHistoryEmpty, { color: theme.textSoft }]}>{t('dashboard.castHistoryNoRodEntries')}</Text>
+                      )}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+
+            {!(selectedHistorySession?.rods?.length) && (
+              <Text style={[styles.castHistoryEmpty, { color: theme.textSoft }]}>{t('dashboard.castHistoryNoEntries')}</Text>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={sessionDetailsModalVisible} transparent animationType="slide" onRequestClose={closeSessionDetailsModal}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : Math.max(insets.bottom, 12)}
+        >
+          <View style={[styles.modalCard, { backgroundColor: theme.surface }]}> 
+            <View style={styles.modalHandleWrap}>
+              <View style={[styles.modalHandle, { backgroundColor: theme.borderSoft }]} />
+            </View>
+
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.modalScrollContent}
+              style={styles.modalBodyScroll}
+            >
+              <Text style={[styles.modalTitle, { color: theme.text }]}>{t('dashboard.sessionInfoTitle')}</Text>
+              <Text style={[styles.modalSub, { color: theme.textMuted }]}>{t('dashboard.sessionInfoSubtitle')}</Text>
+              <Text style={[styles.modalLabel, { color: theme.textMuted }]}>{t('dashboard.sessionStandLabel')}</Text>
+              <TextInput
+                style={[styles.modalInput, { borderColor: theme.border, color: theme.text, backgroundColor: theme.inputBg }]}
+                placeholder={t('dashboard.sessionStandPlaceholder')}
+                placeholderTextColor={theme.textSoft}
+                value={sessionStandInput}
+                onChangeText={setSessionStandInput}
+              />
+              <Text style={[styles.modalLabel, { color: theme.textMuted }]}>{t('dashboard.sessionNotesLabel')}</Text>
+              <TextInput
+                style={[styles.modalInput, styles.sessionNotesInput, { borderColor: theme.border, color: theme.text, backgroundColor: theme.inputBg }]}
+                placeholder={t('dashboard.sessionNotesPlaceholder')}
+                placeholderTextColor={theme.textSoft}
+                value={sessionNotesInput}
+                onChangeText={setSessionNotesInput}
+                multiline
+                textAlignVertical="top"
+              />
+            </ScrollView>
+
+            <View style={[styles.modalActions, styles.modalActionsSticky, { borderTopColor: theme.borderSoft, paddingBottom: Math.max(insets.bottom, 10) }]}>
+              <TouchableOpacity style={[styles.modalCancel, { borderColor: theme.border }]} onPress={closeSessionDetailsModal}>
+                <Text style={[styles.modalCancelText, { color: theme.textMuted }]}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalConfirm, { backgroundColor: theme.primary }]} onPress={saveSessionDetails}>
+                <Text style={styles.modalConfirmText}>{t('common.save')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <SuccessSheet
         visible={!!successState}
         title={successState?.title ?? ''}
@@ -1497,6 +1871,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 10 },
   greeting: { fontSize: 19, fontWeight: '700', color: '#1a1a1a' },
   sessionLabel: { fontSize: 12, color: '#777', marginTop: 2 },
+  sessionStandLabel: { fontSize: 12, marginTop: 4 },
+  headerLinksRow: { flexDirection: 'row', gap: 16 },
   changeLocationLinkText: { fontSize: 12, fontWeight: '700', marginTop: 8 },
   startBtn: { backgroundColor: '#1D9E75', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
   startBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
@@ -1570,6 +1946,8 @@ const styles = StyleSheet.create({
 
   rodActions: { flexDirection: 'row', gap: 8 },
   castBtn: { flex: 1, backgroundColor: '#EEF6FF', paddingVertical: 11, borderRadius: 10, alignItems: 'center', borderWidth: 0.5, borderColor: '#B5D4F4' },
+  stopCastBtn: { paddingHorizontal: 12, paddingVertical: 11, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  stopCastBtnText: { fontSize: 12, fontWeight: '800' },
   actionLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actionIcon: { fontSize: 13 },
   castBtnText: { fontSize: 13, fontWeight: '700', color: '#185FA5' },
@@ -1594,10 +1972,14 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalCard: {
     backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 24, paddingBottom: Platform.OS === 'ios' ? 36 : 24,
-    maxHeight: '82%',
+    paddingTop: 10,
+    paddingHorizontal: 20,
+    maxHeight: '84%',
   },
-  modalScrollContent: { paddingBottom: 4 },
+  modalHandleWrap: { alignItems: 'center', paddingBottom: 10 },
+  modalHandle: { width: 44, height: 5, borderRadius: 999 },
+  modalBodyScroll: { flexGrow: 0 },
+  modalScrollContent: { paddingBottom: 14 },
   modalTitle: { fontSize: 18, fontWeight: '800', color: '#1a1a1a', marginBottom: 2 },
   modalSub: { fontSize: 13, color: '#888', marginBottom: 16 },
   modalLabel: { fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 6 },
@@ -1605,6 +1987,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10,
     padding: 13, fontSize: 14, color: '#1a1a1a', backgroundColor: '#fafafa', marginBottom: 12,
   },
+  sessionNotesInput: { minHeight: 120 },
   groupSelectorRow: { gap: 8, paddingBottom: 4, marginBottom: 10 },
   groupChip: {
     maxWidth: 150,
@@ -1651,6 +2034,7 @@ const styles = StyleSheet.create({
   forecastSafe: { flex: 1, backgroundColor: '#f4f6f8' },
   forecastHeader: {
     flexDirection: 'row',
+  modalActionsSticky: { borderTopWidth: 1, paddingTop: 14, marginTop: 0 },
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
@@ -1818,8 +2202,25 @@ const styles = StyleSheet.create({
   historyDetailEyebrow: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
   historyDetailTitle: { fontSize: 22, fontWeight: '900', marginTop: 8 },
   historyDetailSub: { fontSize: 13, marginTop: 6 },
+  historyDetailNotes: { fontSize: 14, lineHeight: 21, marginTop: 10 },
+  historyDetailActionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
+  historyDetailEditButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  historyDetailEditText: { fontSize: 12, fontWeight: '800' },
+  historyDetailSecondaryButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  historyDetailSecondaryText: { fontSize: 12, fontWeight: '800' },
   historyDetailDeleteButton: {
-    marginTop: 14,
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 9,
@@ -1833,6 +2234,26 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
   },
+  castHistoryRodCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 12,
+  },
+  castHistoryHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  castHistorySummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 8 },
+  castHistoryPill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+  castHistoryPillText: { fontSize: 11, fontWeight: '800' },
+  castHistoryToggleBtn: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 9 },
+  castHistoryToggleText: { fontSize: 12, fontWeight: '800' },
+  castHistoryHint: { fontSize: 12, lineHeight: 18, marginTop: 10 },
+  castHistoryEventList: { marginTop: 12 },
+  castHistoryEventRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', borderTopWidth: 1, paddingTop: 12, marginTop: 12 },
+  castHistoryEventBadge: { minWidth: 72, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7, alignItems: 'center' },
+  castHistoryEventBadgeText: { fontSize: 11, fontWeight: '800' },
+  castHistoryEventTitle: { fontSize: 14, fontWeight: '800' },
+  castHistoryEventTime: { fontSize: 12, marginTop: 4 },
+  castHistoryEmpty: { fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 12 },
   historyTimelineSection: {
     borderRadius: 16,
     borderWidth: 1,

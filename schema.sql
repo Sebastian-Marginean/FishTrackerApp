@@ -300,12 +300,19 @@ create table if not exists public.sessions (
   id               uuid default uuid_generate_v4() primary key,
   user_id          uuid references public.profiles(id) on delete cascade not null,
   location_id      uuid references public.locations(id) on delete set null,
+  stand_name       text,
   started_at       timestamptz default now(),
   ended_at         timestamptz,
   weather_snapshot jsonb,         -- snapshot meteo la momentul pornirii
   notes            text,
   is_active        boolean default true
 );
+
+alter table public.sessions
+  add column if not exists stand_name text;
+
+alter table public.sessions
+  add column if not exists notes text;
 
 -- ============================================================
 -- RODS (lansete per sesiune)
@@ -358,6 +365,29 @@ alter table public.rod_setup_history
 
 alter table public.rod_setup_history
   add constraint rod_setup_history_rod_number_check check (rod_number between 1 and 10);
+
+-- ============================================================
+-- ROD CAST HISTORY (istoric lansare / stop per lanseta)
+-- ============================================================
+create table if not exists public.rod_cast_history (
+  id              uuid default uuid_generate_v4() primary key,
+  session_id      uuid references public.sessions(id) on delete cascade not null,
+  rod_id          uuid references public.rods(id) on delete set null,
+  user_id         uuid references public.profiles(id) on delete cascade not null,
+  rod_number      int not null check (rod_number between 1 and 10),
+  event_type      text not null check (event_type in ('cast', 'stop', 'catch')),
+  client_event_id text not null unique,
+  created_at      timestamptz default now()
+);
+
+alter table public.rod_cast_history
+  drop constraint if exists rod_cast_history_event_type_check;
+
+alter table public.rod_cast_history
+  add constraint rod_cast_history_event_type_check check (event_type in ('cast', 'stop', 'catch'));
+
+create index if not exists idx_rod_cast_history_session_created
+  on public.rod_cast_history (session_id, created_at desc);
 
 -- ============================================================
 -- CATCHES (capturi)
@@ -501,6 +531,7 @@ alter table public.locations     enable row level security;
 alter table public.sessions      enable row level security;
 alter table public.rods          enable row level security;
 alter table public.rod_setup_history enable row level security;
+alter table public.rod_cast_history enable row level security;
 alter table public.catches       enable row level security;
 alter table public.groups        enable row level security;
 alter table public.group_members enable row level security;
@@ -723,11 +754,15 @@ create table if not exists public.app_announcements (
   title_en text,
   message_ro text,
   message_en text,
+  link_url text,
   is_active boolean not null default true,
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.app_announcements
+  add column if not exists link_url text;
 
 create index if not exists idx_app_announcements_active_updated
   on public.app_announcements (is_active, updated_at desc);
@@ -857,6 +892,16 @@ create policy "Own rod setup history" on public.rod_setup_history for select usi
 );
 drop policy if exists "Users insert own rod setup history" on public.rod_setup_history;
 create policy "Users insert own rod setup history" on public.rod_setup_history for insert with check (
+  (auth.uid() = user_id or public.is_admin(auth.uid()))
+  and not public.is_user_banned(auth.uid())
+);
+
+drop policy if exists "Own rod cast history" on public.rod_cast_history;
+create policy "Own rod cast history" on public.rod_cast_history for select using (
+  auth.uid() = user_id or public.is_admin(auth.uid())
+);
+drop policy if exists "Users insert own rod cast history" on public.rod_cast_history;
+create policy "Users insert own rod cast history" on public.rod_cast_history for insert with check (
   (auth.uid() = user_id or public.is_admin(auth.uid()))
   and not public.is_user_banned(auth.uid())
 );

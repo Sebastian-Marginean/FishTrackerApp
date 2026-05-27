@@ -41,10 +41,13 @@ interface AdminAnnouncement {
   title_en?: string | null;
   message_ro?: string | null;
   message_en?: string | null;
+  link_url?: string | null;
   is_active: boolean;
   updated_at: string;
   created_at: string;
 }
+
+const DEFAULT_ANNOUNCEMENT_LINK = 'https://fishtracker.eu/';
 
 type AdminTab = 'locations' | 'catches' | 'groups' | 'messages' | 'users';
 type ModerationKind = 'mute' | 'ban';
@@ -91,6 +94,11 @@ function normalizeUsername(value: string) {
   return value.trim().replace(/\s+/g, ' ');
 }
 
+function isMissingAnnouncementLinkColumn(error?: { message?: string | null } | null) {
+  const message = error?.message?.toLowerCase() ?? '';
+  return message.includes('link_url') && (message.includes('schema cache') || message.includes('could not find'));
+}
+
 export default function ProfileScreen() {
   const { user, profile, updateProfile, updateEmail, updatePassword, fetchProfile, signOut } = useAuthStore();
   const { language, t } = useI18n();
@@ -132,6 +140,7 @@ export default function ProfileScreen() {
   const [announcementTitleEn, setAnnouncementTitleEn] = useState('');
   const [announcementMessageRo, setAnnouncementMessageRo] = useState('');
   const [announcementMessageEn, setAnnouncementMessageEn] = useState('');
+  const [announcementLinkUrl, setAnnouncementLinkUrl] = useState(DEFAULT_ANNOUNCEMENT_LINK);
   const [savingAnnouncement, setSavingAnnouncement] = useState(false);
   const [moderationUser, setModerationUser] = useState<AdminUser | null>(null);
   const [moderationKind, setModerationKind] = useState<ModerationKind>('mute');
@@ -246,14 +255,25 @@ export default function ProfileScreen() {
       setAnnouncementTitleEn('');
       setAnnouncementMessageRo('');
       setAnnouncementMessageEn('');
+      setAnnouncementLinkUrl(DEFAULT_ANNOUNCEMENT_LINK);
       return;
     }
 
-    const { data, error } = await supabase
+    let result = await supabase
       .from('app_announcements')
-      .select('id, title_ro, title_en, message_ro, message_en, is_active, updated_at, created_at')
+      .select('id, title_ro, title_en, message_ro, message_en, link_url, is_active, updated_at, created_at')
       .order('updated_at', { ascending: false })
       .limit(1);
+
+    if (isMissingAnnouncementLinkColumn(result.error)) {
+      result = await supabase
+        .from('app_announcements')
+        .select('id, title_ro, title_en, message_ro, message_en, is_active, updated_at, created_at')
+        .order('updated_at', { ascending: false })
+        .limit(1);
+    }
+
+    const { data, error } = result;
 
     if (error) {
       setAdminAnnouncement(null);
@@ -266,6 +286,7 @@ export default function ProfileScreen() {
     setAnnouncementTitleEn(latestAnnouncement?.title_en ?? '');
     setAnnouncementMessageRo(latestAnnouncement?.message_ro ?? '');
     setAnnouncementMessageEn(latestAnnouncement?.message_en ?? '');
+    setAnnouncementLinkUrl(latestAnnouncement?.link_url?.trim() || DEFAULT_ANNOUNCEMENT_LINK);
   }, [isAdmin]);
 
   const moderationOptions = useMemo(() => [
@@ -437,6 +458,7 @@ export default function ProfileScreen() {
     const nextTitleEn = announcementTitleEn.trim();
     const nextMessageRo = announcementMessageRo.trim();
     const nextMessageEn = announcementMessageEn.trim();
+    const nextLinkUrl = announcementLinkUrl.trim() || DEFAULT_ANNOUNCEMENT_LINK;
 
     if (!nextTitleRo && !nextTitleEn && !nextMessageRo && !nextMessageEn) {
       openWarningNotice(t('profile.announcementValidationTitle'), t('profile.announcementValidationMessage'));
@@ -450,13 +472,23 @@ export default function ProfileScreen() {
       title_en: nextTitleEn || null,
       message_ro: nextMessageRo || null,
       message_en: nextMessageEn || null,
+      link_url: nextLinkUrl,
       is_active: true,
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = adminAnnouncement?.id
+    let result = adminAnnouncement?.id
       ? await supabase.from('app_announcements').update(payload).eq('id', adminAnnouncement.id)
       : await supabase.from('app_announcements').insert({ ...payload, created_by: user.id });
+
+    if (isMissingAnnouncementLinkColumn(result.error)) {
+      const { link_url, ...fallbackPayload } = payload;
+      result = adminAnnouncement?.id
+        ? await supabase.from('app_announcements').update(fallbackPayload).eq('id', adminAnnouncement.id)
+        : await supabase.from('app_announcements').insert({ ...fallbackPayload, created_by: user.id });
+    }
+
+    const { error } = result;
 
     setSavingAnnouncement(false);
 
@@ -904,6 +936,17 @@ export default function ProfileScreen() {
               value={announcementMessageEn}
               onChangeText={setAnnouncementMessageEn}
               multiline
+            />
+
+            <Text style={[styles.inputLabel, { color: theme.textMuted }]}>{t('profile.announcementLinkLabel')}</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
+              placeholder={t('profile.announcementLinkPlaceholder')}
+              placeholderTextColor="#bbb"
+              value={announcementLinkUrl}
+              onChangeText={setAnnouncementLinkUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
 
             <View style={styles.announcementActions}>

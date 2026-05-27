@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Linking, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { useI18n } from './src/i18n';
@@ -18,6 +18,7 @@ interface LiveAnnouncement {
   title_en?: string | null;
   message_ro?: string | null;
   message_en?: string | null;
+  link_url?: string | null;
   updated_at: string;
 }
 
@@ -30,6 +31,11 @@ function getLocalizedAnnouncementCopy(language: 'ro' | 'en', announcement: LiveA
     : announcement.message_en?.trim() || announcement.message_ro?.trim() || '';
 
   return { title, message };
+}
+
+function isMissingAnnouncementLinkColumn(error?: { message?: string | null } | null) {
+  const message = error?.message?.toLowerCase() ?? '';
+  return message.includes('link_url') && (message.includes('schema cache') || message.includes('could not find'));
 }
 
 function UpdateNoticeBanner() {
@@ -97,12 +103,23 @@ function LiveAnnouncementBanner() {
     let mounted = true;
 
     const loadAnnouncement = async () => {
-      const { data, error } = await supabase
+      let result = await supabase
         .from('app_announcements')
-        .select('id, title_ro, title_en, message_ro, message_en, updated_at')
+        .select('id, title_ro, title_en, message_ro, message_en, link_url, updated_at')
         .eq('is_active', true)
         .order('updated_at', { ascending: false })
         .limit(1);
+
+      if (isMissingAnnouncementLinkColumn(result.error)) {
+        result = await supabase
+          .from('app_announcements')
+          .select('id, title_ro, title_en, message_ro, message_en, updated_at')
+          .eq('is_active', true)
+          .order('updated_at', { ascending: false })
+          .limit(1);
+      }
+
+      const { data, error } = result;
 
       if (!mounted) return;
 
@@ -162,7 +179,15 @@ function LiveAnnouncementBanner() {
   if (!announcement || !visible) return null;
 
   const copy = getLocalizedAnnouncementCopy(language, announcement);
+  const linkUrl = announcement.link_url?.trim() || '';
   if (!copy.title && !copy.message) return null;
+
+  const openAnnouncementLink = async () => {
+    if (!linkUrl) return;
+    const supported = await Linking.canOpenURL(linkUrl);
+    if (!supported) return;
+    await Linking.openURL(linkUrl);
+  };
 
   return (
     <View
@@ -176,6 +201,11 @@ function LiveAnnouncementBanner() {
           <Text style={styles.updateBannerEyebrow}>{t('app.liveAnnouncementEyebrow')}</Text>
           {!!copy.title && <Text style={styles.updateBannerTitle}>{copy.title}</Text>}
           {!!copy.message && <Text style={styles.updateBannerMessage}>{copy.message}</Text>}
+          {!!linkUrl && (
+            <TouchableOpacity style={styles.liveAnnouncementLinkWrap} onPress={() => void openAnnouncementLink()}>
+              <Text style={styles.liveAnnouncementLink}>{t('app.liveAnnouncementLink')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
         <TouchableOpacity style={styles.updateBannerButton} onPress={() => void dismissAnnouncement()}>
           <Text style={styles.updateBannerButtonText}>{t('app.liveAnnouncementAction')}</Text>
@@ -230,6 +260,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     marginTop: 4,
+  },
+  liveAnnouncementLinkWrap: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+  },
+  liveAnnouncementLink: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+    textDecorationLine: 'underline',
   },
   updateBannerButton: {
     backgroundColor: 'rgba(255,255,255,0.18)',
