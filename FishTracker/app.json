@@ -3,7 +3,7 @@
     "name": "FishTracker",
     "slug": "FishTracker",
     "scheme": "fishtracker",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/logoFishTracker.png",
     "userInterfaceStyle": "light",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "ro.fishtracker.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSCameraUsageDescription": "FishTracker foloseste camera pentru a fotografia capturile si pozele din profil.",
         "NSPhotoLibraryUsageDescription": "FishTracker are nevoie de acces la poze pentru a incarca imagini in profil, locatii si capturi.",
@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "ro.fishtracker.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logoFishTracker.png",
         "backgroundColor": "#ffffff"

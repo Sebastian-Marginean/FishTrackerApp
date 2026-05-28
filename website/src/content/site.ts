@@ -3,9 +3,9 @@ export const siteContent = {
   tagline: 'Jurnalul digital pentru pescari care vor ordine, control si comunitate.',
   description:
     'FishTracker reuneste intr-o singura aplicatie partida activa, capturile, apele salvate, grupurile private si comunitatea, intr-o experienta rapida si usor de folosit direct de pe telefon.',
-  apkUrl: '/downloads/FishTracker-v1.0.1.apk',
+  apkUrl: '/downloads/FishTracker-v1.0.2.apk',
   apkLabel: 'Descarca APK pentru Android',
-  version: 'v1.0.1',
+  version: 'v1.0.2',
   status: 'Disponibil acum',
   highlights: [
     'Pornesti rapid o partida si urmaresti fiecare lanseta',
@@ -119,12 +119,21 @@ export const siteContent = {
   ],
   releaseNotes: [
     {
-      version: 'v1.0.1',
-      title: 'Update final Android',
+      version: 'v1.0.2',
+      title: 'Partide, lansari si update-uri mai clare',
       notes: [
-        'Am adaugat camp separat pentru momeala de carlig, distinct de nada si montura.',
-        'Aplicatia include acum lacuri globale si lacuri personale, organizate mai clar pentru fiecare utilizator.',
-        'Chat-urile au fost fluidizate prin actualizari live mai curate si o experienta mai stabila.',
+        'Am imbunatatit controlul partidei active, inclusiv inchiderea sesiunii si editarea detaliilor intr-un flux mai curat.',
+        'Istoricul de lansari afiseaza mai clar evenimentele de lansare, stop si captura pentru fiecare lanseta.',
+        'Anunturile si website-ul de download au fost sincronizate mai bine cu ultima versiune a aplicatiei.',
+      ],
+    },
+    {
+      version: 'v1.0.1',
+      title: 'Partide mai clare si control mai bun',
+      notes: [
+        'Am adaugat detalii editabile pentru partida, inclusiv standul si notitele salvate direct in sesiune.',
+        'Istoricul de lansari este mai clar, cu evenimente pentru lansare, stop si captura pe fiecare lanseta.',
+        'Clasamentele, anunturile globale si experienta generala din aplicatie au fost rafinate pentru o folosire mai stabila.',
       ],
     },
     {
