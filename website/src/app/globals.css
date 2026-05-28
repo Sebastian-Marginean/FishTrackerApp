@@ -924,6 +924,17 @@ html[data-theme='light'] .secondary-cta.strong {
   color: #f4fffb;
 }
 
+html[data-theme='light'] .bottom-cta .secondary-cta.strong {
+  background: linear-gradient(135deg, #127c59 0%, #16986d 100%);
+  color: #f7fffc;
+  border: 1px solid rgba(10, 72, 51, 0.14);
+  box-shadow: 0 14px 28px rgba(18, 124, 89, 0.22);
+}
+
+html[data-theme='light'] .bottom-cta .secondary-cta.strong:hover {
+  background: linear-gradient(135deg, #0f6b4c 0%, #148764 100%);
+}
+
 .gallery-card,
 .faq-panel,
 .updates-panel {

@@ -283,15 +283,6 @@ type Dictionary = {
         ],
         releaseNotes: [
           {
-            version: 'v1.0.2',
-            title: 'Partide, lansari si update-uri mai clare',
-            notes: [
-              'Am imbunatatit controlul partidei active, inclusiv inchiderea sesiunii si editarea detaliilor intr-un flux mai curat.',
-              'Istoricul de lansari afiseaza mai clar evenimentele de lansare, stop si captura pentru fiecare lanseta.',
-              'Anunturile si website-ul de download au fost sincronizate mai bine cu ultima versiune a aplicatiei.',
-            ],
-          },
-          {
             version: 'v1.0.1',
             title: 'Partide mai clare si control mai bun',
             notes: [
@@ -621,15 +612,6 @@ type Dictionary = {
           },
         ],
         releaseNotes: [
-          {
-            version: 'v1.0.2',
-            title: 'Clearer sessions, cast history and updates',
-            notes: [
-              'We improved active session control, including a cleaner flow for ending sessions and editing details.',
-              'Cast history now shows cast, stop and catch events more clearly for each rod.',
-              'Announcements and the download website are now better aligned with the latest app release.',
-            ],
-          },
           {
             version: 'v1.0.1',
             title: 'Clearer sessions and better control',

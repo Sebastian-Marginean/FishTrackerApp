@@ -119,15 +119,6 @@ export const siteContent = {
   ],
   releaseNotes: [
     {
-      version: 'v1.0.2',
-      title: 'Partide, lansari si update-uri mai clare',
-      notes: [
-        'Am imbunatatit controlul partidei active, inclusiv inchiderea sesiunii si editarea detaliilor intr-un flux mai curat.',
-        'Istoricul de lansari afiseaza mai clar evenimentele de lansare, stop si captura pentru fiecare lanseta.',
-        'Anunturile si website-ul de download au fost sincronizate mai bine cu ultima versiune a aplicatiei.',
-      ],
-    },
-    {
       version: 'v1.0.1',
       title: 'Partide mai clare si control mai bun',
       notes: [
